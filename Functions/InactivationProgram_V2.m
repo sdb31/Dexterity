@@ -1,6 +1,8 @@
 function InactivationProgram_V2(varargin)
 valid = 0;
 temp = inputdlg('Number of animals to analyze');
+Titles = inputdlg('List the titles of each data set followed by a space', 'Data Set Titles', [1 50]);
+Titles = strsplit(Titles{:});
 while valid < 1
     num_animals = str2num(temp{1});
     if isempty(num_animals) == 0
@@ -15,7 +17,7 @@ a = 1;
 
 while a <= handles.num_animals
     [temp_pre_files pre_path] = uigetfile('*.ArdyMotor', ... 
-        ['Select Animal ' num2str(a) ' Pre Lesion data'], ...
+        ['Select Animal ' num2str(a) ' Pre data'], ...
         'multiselect','on');                                                %Have the user pick an input *.ArdyMotor file or pre_files.
     if ~iscell(temp_pre_files) && temp_pre_files(1) == 0                              %If no file was selected...
         return                                                              %Exit the function.
@@ -42,7 +44,7 @@ while a <= handles.num_animals
     handles.(animal_pre).pre.path = pre_path;
 
     [temp_post_files post_path] = uigetfile('*.ArdyMotor', ... 
-        ['Select Animal ' num2str(a) ' Post Lesion data'], ...
+        ['Select Animal ' num2str(a) ' Post data'], ...
         'multiselect','on');                                                %Have the user pick an input *.ArdyMotor file or pre_files.
     if ~iscell(temp_post_files) && temp_post_files(1) == 0                                       %If no file was selected...
         return                                                              %Exit the function.
@@ -88,602 +90,71 @@ for k = 1:num_animals
         handles.(animal).pre.files, handles.(animal).pre.path);
     handles.(animal).pre.trialdata = TransformTrialData( ...
         handles.(animal).pre.files, handles.(animal).pre.path);
+    Pre_Sessions = handles.(animal).pre.data.num_sessions;
 
     %% Do post-lesion file processing
     handles.(animal).post.data = TransformKnobData( ... 
         handles.(animal).post.files, handles.(animal).post.path);
     handles.(animal).post.trialdata = TransformTrialData( ...
         handles.(animal).post.files, handles.(animal).post.path);
-
-end
-%% Set up axes for plotting
-handles.analysis = 'data';
-
-
-
-handles = Make_GUI(handles);
-set(handles.animal_list, 'string', handles.animals);
-handles.cur_animal = handles.animals{1};
-
-sessions_pre = 1:handles.(handles.cur_animal).pre.data.num_sessions;
-sessions_post = 1:handles.(handles.cur_animal).post.data.num_sessions;
-
-set(handles.session_list_pre, 'string', sessions_pre);
-set(handles.session_list_post, 'string', sessions_post);
-
-set(handles.total_mean_distance, 'callback', @MeanDistance);
-set(handles.latency_to_hit, 'callback', @LatencyToHit);
-set(handles.peak_velocity, 'callback', @PeakVelocity);
-set(handles.peak_acceleration, 'callback', @PeakAcceleration);
-set(handles.num_turns, 'callback', @NumberOfTurns);
-set(handles.mean_turn_distance, 'callback', @MeanTurnDistance);
-set(handles.animal_list, 'callback', @AnimalSelect);
-set(handles.trial_viewer, 'callback', @TrialViewer);
-set(handles.session_list_pre, 'callback', @SessionSelectPre);
-set(handles.session_list_post, 'callback', @SessionSelectPost);
-% set(handles.savebutton, 'callback', @SavePlot);
-
-guidata(handles.fig,handles);
-
-
-
-
-%% This sub function plots data
-function PlotData(handles,preorpost,parameter,cur_animal)
-
-%Plot the trial data in a scatter plot
-scatter(1:sum(handles.(handles.cur_animal).(preorpost).data.sessions), ... 
-    handles.(cur_animal).(preorpost).data.(parameter).sessionscombined, ...
-    'parent', handles.(preorpost).axes); 
-
-%Calculate y axis limits
-y_limit = max(max(max(handles.(cur_animal).pre.data.(parameter).sessionscombined)), ... 
-    max(max(handles.(cur_animal).post.data.(parameter).sessionscombined)));
-set(handles.pre.axes, 'Ylim', [0 y_limit]);
-set(handles.post.axes, 'Ylim', [0 y_limit]);
-
-%Calculate x axis limits
-x_limit = 1.01*sum(handles.(cur_animal).(preorpost).data.sessions);
-set(handles.(preorpost).axes, 'Xlim',[0 x_limit]);                          %Set Xlimit to 1% larger than max
-     
-
-
-%Plot the line for the total mean of all sessions
-line(get(handles.(preorpost).axes, 'Xlim'), ... 
-    [handles.(cur_animal).(preorpost).data.(parameter).combinedmean ...
-    handles.(cur_animal).(preorpost).data.(parameter).combinedmean], ...
-    'color', 'g', 'linewidth', 4, 'linestyle', '--', ...
-    'parent', handles.(preorpost).axes);
-
-%Plot the threshold lines if plotting mean distance
-if (strcmpi((parameter), 'mean_distance') == 1)
-    line(1:length(handles.(cur_animal).(preorpost).data.threshold.sessionscombined), ...
-        handles.(cur_animal).(preorpost).data.threshold.sessionscombined, ... 
-        'color', 'm', 'linewidth', 3, 'linestyle', '--', 'parent', ... 
-        handles.(preorpost).axes);
+    Post_Sessions = handles.(animal).post.data.num_sessions;
 end
 
-%Plot the lines for session means
-prev_sessions = 1;
-for f = 1:length(handles.(handles.cur_animal).(preorpost).files)
-    line([prev_sessions (handles.(cur_animal).(preorpost).data.sessions(f)+prev_sessions-1)], ...
-        [handles.(cur_animal).(preorpost).data.(parameter).sessionmeans(f,1) ... 
-        handles.(cur_animal).(preorpost).data.(parameter).sessionmeans(f,1)], 'Color', ...
-        'k', 'linewidth', 2.5, 'parent', ...
-        handles.(preorpost).axes);
-    prev_sessions = handles.(cur_animal).(preorpost).data.sessions(f) + prev_sessions;
-end
-
-prev_session_marker = 0;
-session_marker = 0;                                                            
-for d = 1:length(handles.(cur_animal).(preorpost).data.sessions)
-    %Keep track of where each session begins
-    session_marker = session_marker + handles.(cur_animal).(preorpost).data.sessions(d);
-    
-    %Draw a line to mark end of session
-    line([session_marker session_marker],[0 y_limit],'color','r','linestyle','--', ... 
-        'linewidth',1, 'parent', handles.(preorpost).axes);  
-    
-    %Label session line
-    text(session_marker,0.9*y_limit, ... 
-    ['Session ' num2str(d)],'margin',2,'edgecolor','k',...
-    'backgroundcolor','w','rotation',90, 'fontsize',6,...
-    'horizontalalignment','center','verticalalignment','middle', ...
-    'parent', handles.(preorpost).axes); 
-    
-    if (length(handles.(cur_animal).(preorpost).data.sessions) < 6)
-        text(((session_marker - prev_session_marker)/2)+prev_session_marker,y_limit, ... 
-        ['Session Mean: ' num2str(handles.(cur_animal).(preorpost).data.(parameter).sessionmeans(d,1))], ...
-        'margin',2,'edgecolor','k',...
-        'backgroundcolor',[.7 .9 .7], 'fontsize',7,...
-        'horizontalalignment','center','verticalalignment','middle', ...
-        'parent', handles.(preorpost).axes); 
-    elseif (length(handles.(cur_animal).(preorpost).data.sessions) < 11)
-        text(((session_marker - prev_session_marker)/2)+prev_session_marker,y_limit, ... 
-        [num2str(handles.(cur_animal).(preorpost).data.(parameter).sessionmeans(d,1))], ...
-        'margin',2,'edgecolor','k',...
-        'backgroundcolor',[.7 .9 .7], 'fontsize',7,...
-        'horizontalalignment','center','verticalalignment','middle', ...
-        'parent', handles.(preorpost).axes);
-    
-    end 
-    prev_session_marker = session_marker;
-end
-
-switch preorpost
-    case 'pre'
-        Title_label = 'Pre';
-    case 'post'
-        Title_label = 'Post';
-end
-
-switch parameter
-    case 'mean_distance'
-        title_text = [cur_animal ' ' Title_label ' Lesion: Max Distance Turned'];
-        y_label = 'Degrees';        
-    case 'latency_to_hit'
-        title_text = [cur_animal ' ' Title_label ' Lesion: Latency To Hit'];
-        y_label = 'Time (ms)';
-    case 'peak_velocity'
-        title_text = [cur_animal ' ' Title_label ' Lesion: Peak Velocity'];
-        y_label = 'Velocity (deg/10ms)';
-    case 'peak_acceleration'
-        title_text = [cur_animal ' ' Title_label ' Lesion: Peak Acceleration'];
-        y_label = 'Acceleration (deg/10ms^2)';
-    case 'num_turns'
-        title_text = [cur_animal ' ' Title_label ' Lesion: Number of Turns'];
-        y_label = 'Turns';
-    case 'mean_turn_distance'
-        title_text = [cur_animal ' ' Title_label ' Lesion: Mean Turn Distance'];
-        y_label = 'Degrees';
-
-end
-
-title(title_text, 'FontWeight', 'bold', ... 
-    'FontSize', 20, 'parent', handles.(preorpost).axes);
-xlabel('Trials', 'parent', handles.(preorpost).axes, 'FontWeight', 'bold', ...
-    'FontSize', 14);
-ylabel(y_label, 'FontWeight', 'bold', 'parent', ... 
-    handles.(preorpost).axes, 'FontSize', 14);
-
-text(x_limit, 1.03*y_limit, ...
-    ['Total Mean: ' num2str(handles.(cur_animal).(preorpost).data.(parameter).combinedmean)], ...
-    'fontsize', 14, 'FontWeight', 'bold', ...
-    'horizontalalignment', 'right', 'verticalalignment', 'bottom', ...
-    'parent', handles.(preorpost).axes);
-
-%This function plots the trial data
-function PlotTrial(handles, preorpost)
-
-cla(handles.(preorpost).trial_axes);
-
-trial_start = 100;
-trial_end = 300;
-
-s_pre = handles.(handles.cur_animal).pre.session_select;
-s_post = handles.(handles.cur_animal).post.session_select;
-
-
-handles.pre.max_signal = max(handles.(handles.cur_animal).pre.trialdata.mean_plot(s_pre,:));
-handles.post.max_signal = max(handles.(handles.cur_animal).post.trialdata.mean_plot(s_post,:));
-max_signal = max(handles.pre.max_signal, handles.post.max_signal);
-
-y_max = 1.2*max_signal;
-
-
-y_min = -(0.025*y_max);
-s = handles.(handles.cur_animal).(preorpost).session_select;
-
-%Plot confidence interval fill
-fill([1:500,500:-1:1], ... 
-    [handles.(handles.cur_animal).(preorpost).trialdata.upper(s,:), ... 
-    fliplr(handles.(handles.cur_animal).(preorpost).trialdata.lower(s,:))], ... 
-    [0 0.5 0], 'parent', handles.(preorpost).trial_axes);
-hold on;
-
-%plot mean data line
-line((1:500),handles.(handles.cur_animal).(preorpost).trialdata.mean_plot(s,:), ... 
-    'Color', 'k', 'linewidth', 2, 'parent', handles.(preorpost).trial_axes);
-hold on;
-
-%Plot max pre signal line
-line([0 500], [handles.pre.max_signal handles.pre.max_signal], ...
-    'parent', handles.(preorpost).trial_axes, 'linestyle', '--', 'color', 'b');
-%Label max pre signal line
-text(450, handles.pre.max_signal, ['Pre Max: ' num2str(handles.pre.max_signal)], 'parent', ...
-    handles.(preorpost).trial_axes, 'horizontalalignment','center','verticalalignment','middle', ...
-    'margin',2,'edgecolor','k',...
-    'backgroundcolor','w', 'fontsize',8, 'FontWeight', 'bold');
-
-%Plot max post signal line
-line([0 500], [handles.post.max_signal handles.post.max_signal], ...
-    'parent', handles.(preorpost).trial_axes, 'linestyle', '--', 'color', [1 0.4 0.7]);
-%Label max post signal line
-text(450, handles.post.max_signal, ['Post Max: ' num2str(handles.post.max_signal)], 'parent', ...
-    handles.(preorpost).trial_axes, 'horizontalalignment','center','verticalalignment','middle', ...
-    'margin',2,'edgecolor','k',...
-    'backgroundcolor','w', 'fontsize',8,'FontWeight', 'bold');
-
-
-%Plot x axis line 
-line([0 500], [0 0], 'linewidth', 2, 'parent', handles.(preorpost).trial_axes, ...
-    'color', 'k');
-
-%plot hit window start line
-line([trial_start trial_start], [0 y_max], 'parent', handles.(preorpost).trial_axes, ...
-    'Color', 'k', 'linestyle', '--', 'linewidth', 1);
-
-%Plot hit window end line
-line([trial_end trial_end], [0 y_max], 'parent', handles.(preorpost).trial_axes, ...
-    'Color', 'k', 'linestyle', '--', 'linewidth', 1);
-
-%plot Hit Window line up top
-line([trial_start trial_end], [0.95*y_max 0.95*y_max], 'parent', handles.(preorpost).trial_axes, ...
-    'Color', 'k', 'linestyle', '--', 'linewidth', 1);
-
-%Plot hit window text box
-text(trial_end - trial_start,0.95*y_max, ... 
-    'Hit Window','margin',2,'edgecolor','k',...
-    'backgroundcolor','w', 'fontsize',10,...
-    'horizontalalignment','center','verticalalignment','middle', ...
-    'parent', handles.(preorpost).trial_axes, 'FontWeight', 'bold'); 
-
-%Label axes
-
-if (strcmpi(preorpost, 'pre'))
-    title_label = 'Pre';
-else
-    title_label = 'Post';
-end
-
-title([handles.cur_animal ' ' title_label ' Lesion: Mean Trial with 95% Confidence Interval'], ...
-    'parent', handles.(preorpost).trial_axes, 'FontSize', 12, 'FontWeight', 'bold');
-ylabel('Degrees', 'parent', handles.(preorpost).trial_axes, 'FontWeight', 'bold', ...
-    'FontSize', 12);
-xlabel('Time (10ms)', 'parent', handles.(preorpost).trial_axes, 'FontWeight', 'bold');
-
-
-
-random_trials = sort(round(rand(1,9)*handles.(handles.cur_animal).(preorpost).trialdata.session_length(s)));
-if (random_trials(1) == 0)
-    random_trials(1) = 1;
-end
-
-for i = 1:9
-    cla(handles.(preorpost).sub_axes(i), 'reset');
-    area(1:500, handles.(handles.cur_animal).(preorpost).trialdata.trial((random_trials(i)), :, s), ...
-        'linewidth', 2,'facecolor',[0.5 0.5 1], 'parent', handles.(preorpost).sub_axes(i));
-
-    text(425, max_signal, ['Trial ' num2str(random_trials(i))], 'parent', ...
-    handles.(preorpost).sub_axes(i), 'horizontalalignment','center','verticalalignment','middle', ...
-    'margin',2,'edgecolor','k',...
-    'backgroundcolor','w', 'fontsize',8,'FontWeight', 'bold');
-
-    set(handles.(preorpost).sub_axes(i), 'Ylim', [y_min y_max], 'Xlim', [0 500]);
-    
-    %plot hit window start line
-    line([trial_start trial_start], [0 y_max], 'parent', handles.(preorpost).sub_axes(i), ...
-        'Color', 'k', 'linestyle', '--', 'linewidth', 1);
-
-    %Plot hit window end line
-    line([trial_end trial_end], [0 y_max], 'parent', handles.(preorpost).sub_axes(i), ...
-        'Color', 'k', 'linestyle', '--', 'linewidth', 1);
-
-end
-
-set(handles.(preorpost).trial_axes, 'Ylim', [y_min y_max], 'Xlim', [0 500]);
-    
-
-%% This function is called when MeanDistance button is pushed
-function MeanDistance(hObject,~)
-handles = guidata(hObject);
-if ~strcmpi(handles.analysis, 'data')
-    handles.analysis = 'data';
-    Axes_Select(handles);
-end
-guidata(handles.fig,handles);
-PlotData(handles, 'pre', 'mean_distance', handles.cur_animal);
-PlotData(handles,'post','mean_distance', handles.cur_animal);
-guidata(handles.fig, handles);
-
-%% This function is called when LatencyToHit button is pushed
-function LatencyToHit(hObject,~)
-handles = guidata(hObject);
-if ~strcmpi(handles.analysis, 'data')
-    handles.analysis = 'data';
-    Axes_Select(handles);
-end
-guidata(handles.fig,handles);
-
-guidata(handles.fig,handles);
-PlotData(handles, 'pre', 'latency_to_hit', handles.cur_animal);
-PlotData(handles,'post','latency_to_hit', handles.cur_animal);
-
-%% This function is called when PeakVelocity button is pushed
-function PeakVelocity(hObject,~)
-handles = guidata(hObject);
-if ~strcmpi(handles.analysis, 'data')
-    handles.analysis = 'data';
-    Axes_Select(handles);
-end
-guidata(handles.fig,handles);
-
-PlotData(handles, 'pre', 'peak_velocity', handles.cur_animal);
-PlotData(handles,'post','peak_velocity', handles.cur_animal);
-
-%% This function is called when PeakAcceleration button is pushed
-function PeakAcceleration(hObject,~)
-handles = guidata(hObject);
-if ~strcmpi(handles.analysis, 'data')
-    handles.analysis = 'data';
-    Axes_Select(handles);
-end
-guidata(handles.fig,handles);
-
-PlotData(handles, 'pre', 'peak_acceleration', handles.cur_animal);
-PlotData(handles,'post','peak_acceleration', handles.cur_animal);
-guidata(handles.fig,handles);
-
-%% This function is called when NumberOfTurns button is pushed
-function NumberOfTurns(hObject,~)
-handles = guidata(hObject);
-if ~strcmpi(handles.analysis, 'data')
-    handles.analysis = 'data';
-    Axes_Select(handles);
-end
-guidata(handles.fig,handles);
-
-PlotData(handles, 'pre', 'num_turns', handles.cur_animal);
-PlotData(handles,'post','num_turns', handles.cur_animal);
-guidata(handles.fig,handles);
-
-%% This function is called when MeanTurnDistance button is pushed
-function MeanTurnDistance(hObject,~)
-handles = guidata(hObject);
-if ~strcmpi(handles.analysis, 'data')
-    handles.analysis = 'data';
-    Axes_Select(handles);
-end
-guidata(handles.fig,handles);
-
-PlotData(handles, 'pre', 'mean_turn_distance', handles.cur_animal);
-PlotData(handles,'post','mean_turn_distance', handles.cur_animal);
-guidata(handles.fig,handles);
-
-%% This function is called when rat list drop down is manipulated
-function AnimalSelect(hObject, ~)
-handles = guidata(hObject);
-sel = get(handles.animal_list, 'Value');
-animal_list = get(handles.animal_list, 'string');
-handles.cur_animal = animal_list{sel};
-
-sessions_pre = 1:handles.(handles.cur_animal).pre.data.num_sessions;
-sessions_post = 1:handles.(handles.cur_animal).post.data.num_sessions;
-
-
-
-set(handles.session_list_pre, 'string', sessions_pre);
-set(handles.session_list_post, 'string', sessions_post);
-
-guidata(handles.fig,handles);
-
-function SessionSelectPre(hObject, ~)
-handles = guidata(hObject);
-sel = get(handles.session_list_pre, 'Value');
-handles.(handles.cur_animal).pre.session_select = sel;
-guidata(handles.fig,handles);
-PlotTrial(handles,'pre');
-PlotTrial(handles,'post');
-
-function SessionSelectPost(hObject, ~)
-handles = guidata(hObject);
-sel = get(handles.session_list_post, 'Value');
-handles.(handles.cur_animal).post.session_select = sel;
-guidata(handles.fig, handles);
-PlotTrial(handles,'pre');
-PlotTrial(handles,'post');
-
-function TrialViewer(hObject, ~)
-handles = guidata(hObject);
-
-handles.(handles.cur_animal).pre.session_select = 1;
-handles.(handles.cur_animal).post.session_select = 1;
-
-if ~strcmpi(handles.analysis, 'trial')
-    handles.analysis = 'trial';
-    guidata(handles.fig,handles);
-    Axes_Select(handles);
-end
-
-%Clear the trial axes
-cla(handles.pre.trial_axes, 'reset');
-cla(handles.post.trial_axes, 'reset');
-
-%Clear all the sub axes
-for i = 1:9
-    cla(handles.pre.sub_axes(i), 'reset');
-    cla(handles.post.sub_axes(i), 'reset');
-end
-    
-
-PlotTrial(handles, 'pre');
-PlotTrial(handles, 'post');
-
-
-% axes(handles.pre.axes);
-
-guidata(handles.fig, handles);
-
-%% Make GUI function
-function handles = Make_GUI(handles)
-set(0,'units','centimeters');
-pos = get(0,'screensize');  
-h = 0.8*pos(4);
-w = 4*h/3;  
-
-handles.fig = figure( 'numbertitle','off',...
-    'name','Knob Trial Pre Post Viewer',...
-    'units','centimeters', 'Toolbar', 'figure',...
-    'Position',[pos(3)/2-w/2, pos(4)/2-h/2, w, h]);                         %Create a figure.
-handles.label =  uicontrol(handles.fig,'style','text',...
-    'units','normalized',...
-    'position',[0.01,0.95,0.98,0.04],...
-    'string','Parameter:',...
-    'fontsize',0.7*h,...
-    'backgroundcolor',get(handles.fig,'color'),...
-    'horizontalalignment','left',...
-    'fontweight','bold');                                                   %Create a text label for showing the trial number and time.
-
-handles.pre.axes = axes('units','normalized',...
-    'position',[0.05,0.525,0.925,0.375],...
-    'box','on',...
-    'linewidth',2, 'Visible', 'on');                                                         %Create axes for showing the IR signal.
-handles.post.axes = axes('units','normalized',...
-    'position',[0.05,0.05,0.925,0.375],...
-    'box','on',...
-    'linewidth',2, 'Visible', 'on');    
-
-handles.pre.trial_axes = axes('units','normalized',...
-    'position',[0.05,0.5,0.925/2,0.375],...
-    'box','on',...
-    'linewidth',2, 'Visible', 'off');  
-
-handles.post.trial_axes = axes('units','normalized',...
-    'position',[0.05,0.05,0.925/2,0.375],...
-    'box','on',...
-    'linewidth',2, 'Visible', 'off'); 
-
-handles.pre.sub_axes = nan(1,9);
-handles.post.sub_axes = nan(1,9);
-
-positions = [0.55, 0.7, 0.85; 0.775, 0.6375, 0.5; 0.325, 0.1875, 0.05];
-
-j = 1;
-k = 1;
-for i = 1:9
-    handles.pre.sub_axes(i) = axes('units','normalized',...
-    'position',[positions(1,j),positions(2,k),0.125,0.1],...
-    'box','on',...
-    'linewidth',2, 'Visible', 'off');  
-
-
-    handles.post.sub_axes(i) = axes('units','normalized',...
-    'position',[positions(1,j),positions(3,k),0.125,0.1],...
-    'box','on',...
-    'linewidth',2, 'Visible', 'off');  
-
-
-    if i == 3 || i == 6
-        j = 0;
-        k = k+1;
+figure(2); clf;
+for i = 1:Pre_Sessions;
+    for t = 1:size(handles.(animal).pre.trialdata.trial(:,:,i), 1);
+        hold on;
+        patchline(1:500, handles.(animal).pre.trialdata.trial(t,:,i), 'edgecolor', 'b', 'linewidth', .5, 'edgealpha', 0.075);
+        hold off;
     end
-    j = j+1;
-    
 end
-    
-handles.total_mean_distance = uicontrol(handles.fig,'style','pushbutton',...
-    'units','normalized',...
-    'position',[0.125,0.95,0.15,0.04],...
-    'string','Mean Distance',...
-    'fontsize',0.75*h);                                                     %Create a button for saving a plot image.
-handles.latency_to_hit = uicontrol(handles.fig,'style','pushbutton',...
-    'units','normalized',...
-    'position',[0.285,0.95,0.125,0.04],...
-    'string','Hit Latency',...
-    'fontsize',0.75*h);                                                     %Create a button for saving a plot image.
-handles.peak_velocity = uicontrol(handles.fig,'style','pushbutton',...
-    'units','normalized',...
-    'position',[0.42,0.95,0.15,0.04],...
-    'string','Peak Velocity',...
-    'fontsize',0.75*h);                                                     %Create a button for saving a plot image.
-handles.peak_acceleration = uicontrol(handles.fig,'style','pushbutton',...
-    'units','normalized',...
-    'position',[0.58,0.95,0.125,0.04],...
-    'string','Peak Accel',...
-    'fontsize',0.75*h);                                                     %Create a button for saving a plot image.
-handles.num_turns = uicontrol(handles.fig,'style','pushbutton',...
-    'units','normalized',...
-    'position',[0.715,0.95,0.125,0.04],...
-    'string','# of Turns',...
-    'fontsize',0.75*h);                                                     %Create a button for saving a plot image.
-handles.mean_turn_distance = uicontrol(handles.fig,'style','pushbutton',...
-    'units','normalized',...
-    'position',[0.85,0.95,0.125,0.04],...
-    'string','Turn Distance',...
-    'fontsize',0.75*h);                                                     %Create a button for saving a plot image.
+hold on;
+Mean_Distance_Pre = handles.(animal).pre.data.mean_distance.sessionscombined';
+boxplot(Mean_Distance_Pre, 'positions', 40, 'widths', 50, 'outliersize', 6, 'colors', 'b', 'symbol', 'b.');
+hold off;
+hold on;
+Latency_Pre = handles.(animal).pre.data.latency_to_hit.sessionscombined';
+boxplot(Latency_Pre, 'orientation', 'horizontal', 'widths', 30, 'positions', -20, 'outliersize', 6, 'colors', 'b', 'symbol', 'b.');
+hold off;
+box off; 
+YTickLabels = -40:40:round(1.1*max(Mean_Distance_Pre));
+set(gca, 'TickDir', 'out', 'YLim', [-40 round(1.1*max(Mean_Distance_Pre))], 'YTick', -40:40:round(1.1*max(Mean_Distance_Pre)), 'XLim', [0 350], 'XTick', 0:50:350, 'XTickLabels', {'0', '50', '100', '150', '200', '250', '300', '350'},...
+            'YTickLabels', YTickLabels);
+title(Titles(1), 'Fontweight', 'normal', 'Fontsize', 10);
+ylabel('Supination (degrees)', 'Fontsize', 10);
 
-handles.animal_label =  uicontrol(handles.fig,'style','text',...
-    'units','normalized',...
-    'position',[0.01,0.9,0.1,0.04],...
-    'string','Animal:',...
-    'fontsize',0.7*h,...
-    'backgroundcolor',get(handles.fig,'color'),...
-    'horizontalalignment','left',...
-    'fontweight','bold');                                                   %Create a text label for showing the trial number and time.
+figure(3); clf;
+for i = 1:Post_Sessions;
+    for t = 1:size(handles.(animal).post.trialdata.trial(:,:,i), 1);
+        hold on;
+        patchline(1:500, handles.(animal).post.trialdata.trial(t,:,i), 'edgecolor', 'b', 'linewidth', .5, 'edgealpha', 0.075);
+        hold off;
+    end
+end
+hold on;
+Mean_Distance_Post = handles.(animal).post.data.mean_distance.sessionscombined';
+boxplot(Mean_Distance_Post, 'positions', 40, 'widths', 50, 'outliersize', 6, 'colors', 'b', 'symbol', 'b.');
+hold off;
+hold on;
+Latency_Post = handles.(animal).post.data.latency_to_hit.sessionscombined';
+boxplot(Latency_Post, 'orientation', 'horizontal', 'widths', 30, 'positions', -20, 'outliersize', 6, 'colors', 'b', 'symbol', 'b.');
+hold off;
+box off; 
+YTickLabels = -40:40:round(1.1*max(Mean_Distance_Post));
+set(gca, 'TickDir', 'out', 'YLim', [-40 round(1.1*max(Mean_Distance_Post))], 'YTick', -40:40:round(1.1*max(Mean_Distance_Post)), 'XLim', [0 350], 'XTick', 0:50:350, 'XTickLabels', {'0', '50', '100', '150', '200', '250', '300', '350'},...
+            'YTickLabels', YTickLabels);
+title(Titles(2), 'Fontweight', 'normal', 'Fontsize', 10);
+ylabel('Supination (degrees)', 'Fontsize', 10);
 
-handles.animal_list = uicontrol(handles.fig, 'Style', 'popupmenu', ...
-    'String', '-', 'units', 'normalized', 'enable', 'on', ...
-    'Position', [0.0825 0.9 0.04 0.04], 'Value', 1);
-handles.trial_viewer = uicontrol(handles.fig,'style','pushbutton',...
-    'units','normalized',...
-    'position',[0.125,0.915,0.1,0.03],...
-    'string','Trial Viewer',...
-    'fontsize',0.6*h); 
-
-handles.session_label_pre =  uicontrol(handles.fig,'style','text',...
-    'units','normalized',...
-    'position',[0.25,0.91,0.1,0.03],...
-    'string','Session:',...
-    'fontsize',0.7*h,...
-    'backgroundcolor',get(handles.fig,'color'),...
-    'horizontalalignment','left',...
-    'fontweight','bold', 'Visible', 'off');                                                   %Create a text label for showing the trial number and time.g
-
-handles.session_list_pre = uicontrol(handles.fig, 'Style', 'popupmenu', ...
-    'String', '-', 'units', 'normalized', 'enable', 'on', ...
-    'Position', [0.325 0.91 0.04 0.03], 'Value', 1, 'Visible', 'off');
+figure(5); clf;
+Peak_Velocity_Pre = handles.(animal).pre.data.peak_velocity.sessionscombined';
+Peak_Velocity_Post = handles.(animal).post.data.peak_velocity.sessionscombined';
+set(gca, 'TickDir', 'out', 'XTickLabels', Titles);
+box off;
+title('Peak Velocity', 'Fontweight', 'normal', 'Fontsize', 10);
+ylabel('Velocity (deg/s)', 'Fontsize', 10);
 
 
-handles.session_label_post =  uicontrol(handles.fig,'style','text',...
-    'units','normalized',...
-    'position',[0.5,0.91,0.1,0.03],...
-    'string','Session:',...
-    'fontsize',0.7*h,...
-    'backgroundcolor',get(handles.fig,'color'),...
-    'horizontalalignment','left',...
-    'fontweight','bold', 'Visible', 'off');                                                   %Create a text label for showing the trial number and time.g
-
-handles.session_list_post = uicontrol(handles.fig, 'Style', 'popupmenu', ...
-    'String', '-', 'units', 'normalized', 'enable', 'on', ...
-    'Position', [0.6 0.91 0.04 0.03], 'Value', 1, 'Visible', 'off');
-%% This function is called whenever the main figure is resized
-function Resize(hObject,~)
-handles = guidata(hObject);                                                 %Grab the handles structure from the GUI.
-pos = get(handles.fig,'position');                                          %Grab the main figure position.
-% ylabel('Test','parent',handles.pre.axes,'fontsize',0.75*pos(4),...
-%     'rotation',0,'verticalalignment','middle',...
-%     'horizontalalignment','right');                                    
-% ylabel('TestPost','parent',handles.post.axes,'fontsize',0.75*pos(4),...
-%     'rotation',0,'verticalalignment','middle',...
-%     'horizontalalignment','right');     
-
-set([handles.label,handles.savebutton],'fontsize',0.75*pos(4));             %Update the trial label and savebutton fontsize.
-
-objs_pre = get(handles.pre.axes,'children');                                  %Grab all children of the force axes.
-objs_post = get(handles.post.axes,'children');
-
-% objs_pre(~strcmpi('text',get(objs_pre,'type'))) = [];                               %Kick out all non-text objects.
-% objs_post(~strcmpi('text',get(objs_post,'type'))) = [];                               %Kick out all non-text objects.
-
-
-set(objs_pre,'fontsize',0.5*pos(4));                                            %Update the fontsize of all text objects.
-set(objs_post, 'fontsize', 0.5*post(4));
-
-ylabel('TestPre)','parent',handles.pre.axes,'fontsize',0.75*pos(4));     %Label the force signal.
-xlabel('Trial','parent',handles.pre.axes,'fontsize',0.75*pos(4));     %Label the time axis.
-
-ylabel('TestPost','parent',handles.post.axes,'fontsize',0.75*pos(4));     %Label the force signal.
-xlabel('Trial','parent',handles.post.axes,'fontsize',0.75*pos(4));     %Label the time axis.
 
 %% This subfunction finds peaks in the signal, accounting for equality of contiguous samples.
 function [pks, sig] = Knob_Peak_Finder(signal)
