@@ -1,8 +1,7 @@
 function InactivationProgram_V2(varargin)
 valid = 0;
 temp = inputdlg('Number of animals to analyze');
-Titles = inputdlg('List the titles of each data set followed by a space', 'Data Set Titles', [1 50]);
-Titles = strsplit(Titles{:});
+
 while valid < 1
     num_animals = str2num(temp{1});
     if isempty(num_animals) == 0
@@ -79,7 +78,8 @@ while a <= handles.num_animals
         a = a+1;
     end
 end
-
+Titles = inputdlg('List the titles of each data set followed by a space', 'Data Set Titles', [1 50]);
+Titles = strsplit(Titles{:});
 
 
 for k = 1:num_animals
@@ -146,13 +146,51 @@ set(gca, 'TickDir', 'out', 'YLim', [-40 round(1.1*max(Mean_Distance_Post))], 'YT
 title(Titles(2), 'Fontweight', 'normal', 'Fontsize', 10);
 ylabel('Supination (degrees)', 'Fontsize', 10);
 
+figure(4); clf;
+if Pre_Sessions == 1;
+    Mean_Plot_Pre = handles.(animal).pre.trialdata.mean_plot;
+else
+    Mean_Plot_Pre = nanmean(handles.(animal).pre.trialdata.mean_plot);
+end
+if Post_Sessions == 1;
+   Mean_Plot_Post = handles.(animal).post.trialdata.mean_plot; 
+else
+   Mean_Plot_Post = nanmean(handles.(animal).post.trialdata.mean_plot); 
+end
+plot(1:500, Mean_Plot_Pre, 1:500, Mean_Plot_Post, 'Linewidth', 2);
+title('Mean Waveforms', 'Fontweight', 'Normal', 'Fontsize', 10);
+ylabel('Angle (degrees)', 'Fontsize', 10);
+legend(Titles, 0);
+box off;
+set(gca, 'TickDir', 'out');
+
 figure(5); clf;
-Peak_Velocity_Pre = handles.(animal).pre.data.peak_velocity.sessionscombined';
-Peak_Velocity_Post = handles.(animal).post.data.peak_velocity.sessionscombined';
+Median_Plot_Pre = nanmedian(handles.(animal).pre.trialdata.combined_trials);
+Median_Plot_Post = nanmedian(handles.(animal).post.trialdata.combined_trials);
+plot(1:500, Median_Plot_Pre, 1:500, Median_Plot_Post, 'Linewidth', 2);
+title('Median Waveforms', 'Fontweight', 'Normal', 'Fontsize', 10);
+ylabel('Angle (degrees)', 'Fontsize', 10);
+legend(Titles, 0);
+box off;
+set(gca, 'TickDir', 'out');
+
+figure(6); clf;
+Pre_Post_Sessionscombined = [length(handles.(animal).pre.data.mean_distance.sessionscombined) length(handles.(animal).post.data.mean_distance.sessionscombined)]
+Peak_Velocity = nan(max(Pre_Post_Sessionscombined),2);
+Peak_Velocity_Pre = handles.(animal).pre.data.peak_velocity.sessionscombined'*100;
+for t = 1:Pre_Post_Sessionscombined(1)
+    Peak_Velocity(t,1) = Peak_Velocity_Pre(t);
+end
+Peak_Velocity_Post = handles.(animal).post.data.peak_velocity.sessionscombined'*100;
+for t = 1:Pre_Post_Sessionscombined(2)
+   Peak_Velocity(t,2) = Peak_Velocity_Post(t); 
+end
+boxplot(Peak_Velocity, 'symbol', 'k.', 'outliersize', 3, 'colors', 'k');
 set(gca, 'TickDir', 'out', 'XTickLabels', Titles);
 box off;
 title('Peak Velocity', 'Fontweight', 'normal', 'Fontsize', 10);
 ylabel('Velocity (deg/s)', 'Fontsize', 10);
+
 
 
 
@@ -607,7 +645,7 @@ end
 
 knob_data.combined_trials = nan(knob_data.combined_length, 500);
 knob_data.trial = nan(knob_data.max_session_trials, 500, knob_data.num_sessions);
-
+Counter = 1;
 for s = 1:knob_data.num_sessions
     data = ArdyMotorFileRead(files{s});
     for t = 1:knob_data.session_length(s)
@@ -618,6 +656,8 @@ for s = 1:knob_data.num_sessions
 %             disp('Abnormal positive signal detected >150 deg... Removing')
 %         else
             knob_data.trial(t, :, s) = data.trial(t).signal;
+            knob_data.combined_trials(Counter,:) = data.trial(t).signal;
+            Counter = Counter + 1;
 %         end
     end
 end
