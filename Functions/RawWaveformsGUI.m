@@ -31,19 +31,6 @@ knob_data.combined_trials = nan(knob_data.combined_length, 500);
 knob_data.trial = nan(knob_data.max_session_trials, 500, knob_data.num_sessions);
 
 %% User Variables
-% a = 0;
-% f = figure('Position', [500 300 300 120]);
-% Waveform_Type_Median = uicontrol('Parent', f, 'Style', 'pushbutton', 'String', 'Median',...
-%     'Position', [30 40 100 50]);
-% Waveform_Type_Mean = uicontrol('Parent', f, 'Style', 'pushbutton', 'String', 'Mean',...
-%     'Position', [160 40 100 50]);
-% while a == 0;
-%     if Waveform_Type_Median.ButtonDownFcn;
-%         Waveform_Type = 'Median';
-%         close(f)
-%         a = 1;
-%     end
-% end
 Weeks = inputdlg('How many data sets would you like to analyze?', 'Data Sets', [1 50]);
 Weeks = Weeks{:};
 Weeks = str2double(Weeks);
@@ -80,10 +67,11 @@ for i = 1:length(Weeks);
     end
 end
 %% Plots and Analysis
-if sum(Sessions) == 1;
-    for i = 1:Weeks;
+for i = 1:Weeks
+    if sum(Sessions(i)) == 1;
+        
         figure(i+1); clf;
-        for m = 1;
+        for m = (Session_Count(i)+1):(Session_Count(i+1));
             data = ArdyMotorFileRead(files{m});
             for t = 1:knob_data.session_length(m)
                 TempMatrix(Counter(i),:) = data.trial(t).signal';
@@ -123,7 +111,7 @@ if sum(Sessions) == 1;
         TempMatrix = datasample(TempMatrix,Min_Random_Trials,'Replace', false);
         hold on;
         for t = 1:Min_Random_Trials;
-            patchline(1:500, TempMatrix(t,:), 'edgecolor', 'b', 'linewidth', .5, 'edgealpha', 0.05);
+            patchline(1:500, TempMatrix(t,:), 'edgecolor', 'b', 'linewidth', .5, 'edgealpha', 0.075);
         end
         hold off;
         Overall_Mean(i,:) = Mean_Plot((Session_Count(i)+1):(Session_Count(i+1)),:);
@@ -140,9 +128,8 @@ if sum(Sessions) == 1;
             'YTickLabels', YTickLabels);
         ylabel('Angle (degrees)', 'Fontsize', 10);
         box off;
-    end
-elseif sum(Sessions) > 1;
-    for i = 1:Weeks;
+    elseif sum(Sessions(i)) > 1;
+        
         figure(i+1); clf;
         TempMatrix = [];
         for m = (Session_Count(i)+1):(Session_Count(i+1));
@@ -204,6 +191,7 @@ elseif sum(Sessions) > 1;
         box off;
     end
 end
+
 
 %% Average Waveforms Plots
 FF = Weeks + 2;
