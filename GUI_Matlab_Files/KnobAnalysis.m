@@ -22,7 +22,7 @@ function varargout = KnobAnalysis(varargin)
 
 % Edit the above text to modify the response to help KnobAnalysis
 
-% Last Modified by GUIDE v2.5 14-Mar-2016 11:30:53
+% Last Modified by GUIDE v2.5 28-Mar-2016 09:54:56
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -305,3 +305,24 @@ if n>1
         j = j+1;
     end
 end
+
+
+% --- Executes on button press in Inactivation_Analysis.
+function Inactivation_Analysis_Callback(hObject, eventdata, handles)
+% hObject    handle to Inactivation_Analysis (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.figure1, 'pointer', 'watch')
+try
+    InactivationProgram_V2
+catch ME
+    set(handles.figure1, 'pointer', 'arrow')
+end
+% toc;
+% if toc <5
+%     msgbox('Analysis Incomplete!', 'No Analysis');
+% else 
+%     msgbox('Analysis Complete!', 'Success');
+% end
+set(handles.figure1, 'pointer', 'arrow')
+guidata(hObject, handles);
