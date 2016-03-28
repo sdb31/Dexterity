@@ -81,7 +81,6 @@ end
 Titles = inputdlg('List the titles of each data set followed by a space', 'Data Set Titles', [1 50]);
 Titles = strsplit(Titles{:});
 
-
 for k = 1:num_animals
     animal = handles.animals{k};
 
@@ -99,6 +98,7 @@ for k = 1:num_animals
         handles.(animal).post.files, handles.(animal).post.path);
     Post_Sessions = handles.(animal).post.data.num_sessions;
 end
+
 
 figure(2); clf;
 for i = 1:Pre_Sessions;
