@@ -40,7 +40,7 @@ Sessions = str2double(Sessions);
 Titles = inputdlg('List the titles of each data set followed by a space', 'Data Set Titles', [1 50]);
 Titles = strsplit(Titles{:});
 Session_Count = zeros(1,length(Sessions)+1);
-Waveform_Type = inputdlg('Please write ''Median'' or ''Mean''', 'Waveform Analysis', [1 50]);
+Waveform_Type = inputdlg('Please write ''Median'' or ''Mean'' (Note: case sensitive)', 'Waveform Analysis', [1 50]);
 Waveform_Type = Waveform_Type{:};
 %% Initialize Variables
 for i = 1:length(Sessions);
