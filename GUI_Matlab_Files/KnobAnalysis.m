@@ -22,7 +22,7 @@ function varargout = KnobAnalysis(varargin)
 
 % Edit the above text to modify the response to help KnobAnalysis
 
-% Last Modified by GUIDE v2.5 29-Mar-2016 09:52:47
+% Last Modified by GUIDE v2.5 29-Mar-2016 12:08:27
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
