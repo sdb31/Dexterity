@@ -14,6 +14,7 @@ handles.num_animals = num_animals;                                          %Sto
 a = 1;
 
 while a <= handles.num_animals
+    clear pre_files post_files pre_daycodes post_daycodes
     [temp_pre_files pre_path] = uigetfile('*.ArdyMotor', ... 
         ['Select Animal ' num2str(a) ' Pre Lesion data'], ...
         'multiselect','on');                                                %Have the user pick an input *.ArdyMotor file or pre_files.
