@@ -1,0 +1,759 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>KnobAnalysis</title><meta name="generator" content="MATLAB 8.5"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2016-04-29"><meta name="DC.source" content="KnobAnalysis.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h2>Contents</h2><div><ul><li><a href="#3">Single Animal Functions</a></li><li><a href="#6">Multi Animal Programs</a></li><li><a href="#9">Reset pointer</a></li><li><a href="#12">Knob Peak Finder - required for data extraction algorithms</a></li></ul></div><pre class="codeinput"><span class="keyword">function</span> varargout = KnobAnalysis(varargin)
+<span class="comment">% KnobAnalysis MATLAB code for KnobAnalysis.fig</span>
+<span class="comment">%      KnobAnalysis, by itself, creates a new KnobAnalysis or raises the existing</span>
+<span class="comment">%      singleton*.</span>
+<span class="comment">%</span>
+<span class="comment">%      H = KnobAnalysis returns the handle to a new KnobAnalysis or the handle to</span>
+<span class="comment">%      the existing singleton*.</span>
+<span class="comment">%</span>
+<span class="comment">%      KnobAnalysis('CALLBACK',hObject,eventData,handles,...) calls the local</span>
+<span class="comment">%      function named CALLBACK in KnobAnalysis.M with the given input arguments.</span>
+<span class="comment">%</span>
+<span class="comment">%      KnobAnalysis('Property','Value',...) creates a new KnobAnalysis or raises the</span>
+<span class="comment">%      existing singleton*.  Starting from the left, property value pairs are</span>
+<span class="comment">%      applied to the GUI before KnobAnalysis_OpeningFcn gets called.  An</span>
+<span class="comment">%      unrecognized property name or invalid value makes property application</span>
+<span class="comment">%      stop.  All inputs are passed to KnobAnalysis_OpeningFcn via varargin.</span>
+<span class="comment">%</span>
+<span class="comment">%      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one</span>
+<span class="comment">%      instance to run (singleton)".</span>
+<span class="comment">%</span>
+<span class="comment">% See also: GUIDE, GUIDATA, GUIHANDLES</span>
+
+<span class="comment">% Edit the above text to modify the response to help KnobAnalysis</span>
+
+<span class="comment">% Last Modified by GUIDE v2.5 29-Mar-2016 12:08:27</span>
+
+<span class="comment">% Begin initialization code - DO NOT EDIT</span>
+gui_Singleton = 1;
+gui_State = struct(<span class="string">'gui_Name'</span>,       mfilename, <span class="keyword">...</span>
+                   <span class="string">'gui_Singleton'</span>,  gui_Singleton, <span class="keyword">...</span>
+                   <span class="string">'gui_OpeningFcn'</span>, @KnobAnalysis_OpeningFcn, <span class="keyword">...</span>
+                   <span class="string">'gui_OutputFcn'</span>,  @KnobAnalysis_OutputFcn, <span class="keyword">...</span>
+                   <span class="string">'gui_LayoutFcn'</span>,  [] , <span class="keyword">...</span>
+                   <span class="string">'gui_Callback'</span>,   []);
+<span class="keyword">if</span> nargin &amp;&amp; ischar(varargin{1})
+    gui_State.gui_Callback = str2func(varargin{1});
+<span class="keyword">end</span>
+
+<span class="keyword">if</span> nargout
+    [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
+<span class="keyword">else</span>
+    gui_mainfcn(gui_State, varargin{:});
+<span class="keyword">end</span>
+<span class="comment">% End initialization code - DO NOT EDIT</span>
+
+<span class="comment">% --- Executes just before KnobAnalysis is made visible.</span>
+<span class="keyword">function</span> KnobAnalysis_OpeningFcn(hObject, eventdata, handles, varargin)
+<span class="comment">% This function has no output args, see OutputFcn.</span>
+<span class="comment">% hObject    handle to figure</span>
+<span class="comment">% eventdata  reserved - to be defined in a future version of MATLAB</span>
+<span class="comment">% handles    structure with handles and user data (see GUIDATA)</span>
+<span class="comment">% varargin   command line arguments to KnobAnalysis (see VARARGIN)</span>
+
+<span class="comment">% Choose default command line output for KnobAnalysis</span>
+handles.output = hObject;
+<span class="comment">% Update handles structure</span>
+guidata(hObject, handles);
+
+<span class="comment">% UIWAIT makes KnobAnalysis wait for user response (see UIRESUME)</span>
+<span class="comment">% uiwait(handles.figure1);</span>
+
+<span class="comment">% --- Outputs from this function are returned to the command line.</span>
+<span class="keyword">function</span> varargout = KnobAnalysis_OutputFcn(hObject, eventdata, handles)
+</pre><pre class="codeinput"><span class="comment">% varargout  cell array for returning output args (see VARARGOUT);</span>
+<span class="comment">% hObject    handle to figure</span>
+<span class="comment">% eventdata  reserved - to be defined in a future version of MATLAB</span>
+<span class="comment">% handles    structure with handles and user data (see GUIDATA)</span>
+
+<span class="comment">% Get default command line output from handles structure</span>
+varargout{1} = handles.output;
+</pre><h2>Single Animal Functions<a name="3"></a></h2><p>--- Executes on button press in Single Animal: Quick Session Info.</p><pre class="codeinput"><span class="keyword">function</span> Quick_Stats_2_Callback(hObject, eventdata, handles)
+<span class="comment">% hObject    handle to Quick_Stats_2 (see GCBO)</span>
+<span class="comment">% eventdata  reserved - to be defined in a future version of MATLAB</span>
+<span class="comment">% handles    structure with handles and user data (see GUIDATA)</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'watch'</span>)
+<span class="keyword">try</span>
+    QuickStats
+<span class="keyword">catch</span> ME
+    set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+<span class="keyword">end</span>
+<span class="comment">% toc;</span>
+<span class="comment">% if toc &lt;5</span>
+<span class="comment">%     msgbox('Analysis Incomplete!', 'No Analysis');</span>
+<span class="comment">% else</span>
+<span class="comment">%     msgbox('Analysis Complete!', 'Success');</span>
+<span class="comment">% end</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+guidata(hObject, handles);
+
+<span class="comment">% --- Executes on button press in Single Animal: Detailed Session Info.</span>
+<span class="keyword">function</span> Detailed_Session_Info2_Callback(hObject, eventdata, handles)
+<span class="comment">% hObject    handle to Detailed_Session_Info2 (see GCBO)</span>
+<span class="comment">% eventdata  reserved - to be defined in a future version of MATLAB</span>
+<span class="comment">% handles    structure with handles and user data (see GUIDATA)</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'watch'</span>)
+<span class="keyword">try</span>
+    DetailedStats
+<span class="keyword">catch</span> ME
+    set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+<span class="keyword">end</span>
+<span class="comment">% toc;</span>
+<span class="comment">% if toc &lt;5</span>
+<span class="comment">%     msgbox('Analysis Incomplete!', 'No Analysis');</span>
+<span class="comment">% else</span>
+<span class="comment">%     msgbox('Analysis Complete!', 'Success');</span>
+<span class="comment">% end</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+guidata(hObject, handles);
+
+<span class="comment">% --- Executes on button press in Single Animal: Raw Waveforms.</span>
+<span class="keyword">function</span> Raw_Waveforms_2_Callback(hObject, eventdata, handles)
+<span class="comment">% hObject    handle to Raw_Waveforms_2 (see GCBO)</span>
+<span class="comment">% eventdata  reserved - to be defined in a future version of MATLAB</span>
+<span class="comment">% handles    structure with handles and user data (see GUIDATA)</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'watch'</span>)
+<span class="keyword">try</span>
+    RawWaveformsGUI
+<span class="keyword">catch</span> ME
+    set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+<span class="keyword">end</span>
+<span class="comment">% toc;</span>
+<span class="comment">% if toc &lt;5</span>
+<span class="comment">%     msgbox('Analysis Incomplete!', 'No Analysis');</span>
+<span class="comment">% else</span>
+<span class="comment">%     msgbox('Analysis Complete!', 'Success');</span>
+<span class="comment">% end</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+guidata(hObject, handles);
+
+<span class="comment">% --- Executes on button press in Single Animal: Peaks Program.</span>
+<span class="keyword">function</span> Peak_Program_Callback(hObject, eventdata, handles)
+<span class="comment">% hObject    handle to Peak_Program (see GCBO)</span>
+<span class="comment">% eventdata  reserved - to be defined in a future version of MATLAB</span>
+<span class="comment">% handles    structure with handles and user data (see GUIDATA)</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'watch'</span>)
+<span class="keyword">try</span>
+    PeaksProgramGUI
+<span class="keyword">catch</span> ME
+    set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+<span class="keyword">end</span>
+<span class="comment">% toc;</span>
+<span class="comment">% if toc &lt;5</span>
+<span class="comment">%     msgbox('Analysis Incomplete!', 'No Analysis');</span>
+<span class="comment">% else</span>
+<span class="comment">%     msgbox('Analysis Complete!', 'Success');</span>
+<span class="comment">% end</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+guidata(hObject, handles);
+
+<span class="comment">% --- Executes on button press in Single Animal: Pre/Post Lesion.</span>
+<span class="keyword">function</span> Pre_Post_Lesion_Single_Callback(hObject, eventdata, handles)
+<span class="comment">% hObject    handle to Pre_Post_Lesion_Single (see GCBO)</span>
+<span class="comment">% eventdata  reserved - to be defined in a future version of MATLAB</span>
+<span class="comment">% handles    structure with handles and user data (see GUIDATA)</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'watch'</span>)
+<span class="keyword">try</span>
+    Knob_Analysis_Viewer_V3
+<span class="keyword">catch</span> ME
+    set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+<span class="keyword">end</span>
+<span class="comment">% toc;</span>
+<span class="comment">% if toc &lt;5</span>
+<span class="comment">%     msgbox('Analysis Incomplete!', 'No Analysis');</span>
+<span class="comment">% else</span>
+<span class="comment">%     msgbox('Analysis Complete!', 'Success');</span>
+<span class="comment">% end</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+guidata(hObject, handles);
+
+<span class="comment">% --- Executes on button press in Single Animal: Progress Tracker.</span>
+<span class="keyword">function</span> Progress_Tracker_Single_Animal_Callback(hObject, eventdata, handles)
+</pre><pre class="codeinput"><span class="comment">% hObject    handle to Progress_Tracker_Single_Animal (see GCBO)</span>
+<span class="comment">% eventdata  reserved - to be defined in a future version of MATLAB</span>
+<span class="comment">% handles    structure with handles and user data (see GUIDATA)</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'watch'</span>)
+<span class="keyword">try</span>
+    Multi_Animal_Progress_Tracker_V1
+<span class="keyword">catch</span> ME
+    set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+<span class="keyword">end</span>
+<span class="comment">% toc;</span>
+<span class="comment">% if toc &lt;5</span>
+<span class="comment">%     msgbox('Analysis Incomplete!', 'No Analysis');</span>
+<span class="comment">% else</span>
+<span class="comment">%     msgbox('Analysis Complete!', 'Success');</span>
+<span class="comment">% end</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+guidata(hObject, handles);
+</pre><h2>Multi Animal Programs<a name="6"></a></h2><p>--- Executes on button press in Multiple Animals: Compare Animals.</p><pre class="codeinput"><span class="keyword">function</span> Compare_Each_Animal_Callback(hObject, eventdata, handles)
+<span class="comment">% hObject    handle to Compare_Each_Animal (see GCBO)</span>
+<span class="comment">% eventdata  reserved - to be defined in a future version of MATLAB</span>
+<span class="comment">% handles    structure with handles and user data (see GUIDATA)</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'watch'</span>)
+<span class="keyword">try</span>
+    Compare_Each_Animal_V1
+<span class="keyword">catch</span> ME
+    set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+<span class="keyword">end</span>
+<span class="comment">% toc;</span>
+<span class="comment">% if toc &lt;5</span>
+<span class="comment">%     msgbox('Analysis Incomplete!', 'No Analysis');</span>
+<span class="comment">% else</span>
+<span class="comment">%     msgbox('Analysis Complete!', 'Success');</span>
+<span class="comment">% end</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+guidata(hObject, handles);
+
+<span class="comment">% --- Executes on button press in Multiple Animals: Analyze Group.</span>
+<span class="keyword">function</span> Compare_Animals_Callback(hObject, eventdata, handles)
+<span class="comment">% hObject    handle to Compare_Animals (see GCBO)</span>
+<span class="comment">% eventdata  reserved - to be defined in a future version of MATLAB</span>
+<span class="comment">% handles    structure with handles and user data (see GUIDATA)</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'watch'</span>)
+<span class="keyword">try</span>
+    Compare_Animals_V1
+<span class="keyword">catch</span> ME
+    set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+<span class="keyword">end</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+guidata(hObject, handles);
+
+<span class="comment">% --- Executes on button press in Multiple Animals: Pre/Post Lesion.</span>
+<span class="keyword">function</span> Pre_Post_Lesion_Callback(hObject, eventdata, handles)
+<span class="comment">% hObject    handle to Pre_Post_Lesion (see GCBO)</span>
+<span class="comment">% eventdata  reserved - to be defined in a future version of MATLAB</span>
+<span class="comment">% handles    structure with handles and user data (see GUIDATA)</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'watch'</span>)
+<span class="keyword">try</span>
+    Knob_Analysis_Viewer_V3
+<span class="keyword">catch</span> ME
+    set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+<span class="keyword">end</span>
+<span class="comment">% toc;</span>
+<span class="comment">% if toc &lt;5</span>
+<span class="comment">%     msgbox('Analysis Incomplete!', 'No Analysis');</span>
+<span class="comment">% else</span>
+<span class="comment">%     msgbox('Analysis Complete!', 'Success');</span>
+<span class="comment">% end</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+guidata(hObject, handles);
+
+<span class="comment">% --- Executes on button press in Multiple Animals: Progress Tracker.</span>
+<span class="keyword">function</span> Multi_Animal_Progress_Tracker_Callback(hObject, eventdata, handles)
+</pre><pre class="codeinput"><span class="comment">% hObject    handle to Multi_Animal_Progress_Tracker (see GCBO)</span>
+<span class="comment">% eventdata  reserved - to be defined in a future version of MATLAB</span>
+<span class="comment">% handles    structure with handles and user data (see GUIDATA)</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'watch'</span>)
+<span class="keyword">try</span>
+    Multi_Animal_Progress_Tracker_V1
+<span class="keyword">catch</span> ME
+    set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+<span class="keyword">end</span>
+<span class="comment">% toc;</span>
+<span class="comment">% if toc &lt;5</span>
+<span class="comment">%     msgbox('Analysis Incomplete!', 'No Analysis');</span>
+<span class="comment">% else</span>
+<span class="comment">%     msgbox('Analysis Complete!', 'Success');</span>
+<span class="comment">% end</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+guidata(hObject, handles);
+</pre><h2>Reset pointer<a name="9"></a></h2><p>--- Executes on button press in Reset_Pointer.</p><pre class="codeinput"><span class="keyword">function</span> Reset_Pointer_Callback(hObject, eventdata, handles)
+</pre><pre class="codeinput"><span class="comment">% hObject    handle to Reset_Pointer (see GCBO)</span>
+<span class="comment">% eventdata  reserved - to be defined in a future version of MATLAB</span>
+<span class="comment">% handles    structure with handles and user data (see GUIDATA)</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+guidata(hObject, handles);
+</pre><h2>Knob Peak Finder - required for data extraction algorithms<a name="12"></a></h2><pre class="codeinput"><span class="keyword">function</span> [pks, sig] = Knob_Peak_Finder(signal)
+<span class="comment">%This code finds and kicks out peaks that have a std dev between</span>
+<span class="comment">%them less than 1</span>
+
+smoothed_signal = boxsmooth(signal);                                        <span class="comment">%smooth out the trial signal</span>
+[pks, sig] = findpeaks(smoothed_signal, <span class="string">'MINPEAKHEIGHT'</span>, 5, <span class="keyword">...</span>
+    <span class="string">'MINPEAKDISTANCE'</span>, 10);                                            <span class="comment">%Find local maximma</span>
+n = length(pks);
+j = 1;
+<span class="keyword">if</span> n&gt;1
+    <span class="keyword">while</span> j &lt;= n-1
+        <span class="keyword">if</span> (abs(pks(j)-pks(j+1)) &lt;= 5)                                 <span class="comment">% if the diff between 2 peaks is less than or equal to 5</span>
+            start_sig = sig(j);
+            end_sig = sig(j+1);
+
+            signal_interest = smoothed_signal(start_sig:end_sig);
+            deviation_signal = std(signal_interest);
+
+            <span class="keyword">if</span> deviation_signal &lt; 1
+                pks(j+1) = [];
+                sig(j+1) = [];
+                j = j-1;
+            <span class="keyword">end</span>
+
+        <span class="keyword">end</span>
+        n = length(pks);
+        j = j+1;
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+
+
+<span class="comment">% --- Executes on button press in Inactivation_Analysis.</span>
+<span class="keyword">function</span> Inactivation_Analysis_Callback(hObject, eventdata, handles)
+<span class="comment">% hObject    handle to Inactivation_Analysis (see GCBO)</span>
+<span class="comment">% eventdata  reserved - to be defined in a future version of MATLAB</span>
+<span class="comment">% handles    structure with handles and user data (see GUIDATA)</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'watch'</span>)
+<span class="keyword">try</span>
+    InactivationProgram_V2
+<span class="keyword">catch</span> ME
+    set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+<span class="keyword">end</span>
+<span class="comment">% toc;</span>
+<span class="comment">% if toc &lt;5</span>
+<span class="comment">%     msgbox('Analysis Incomplete!', 'No Analysis');</span>
+<span class="comment">% else</span>
+<span class="comment">%     msgbox('Analysis Complete!', 'Success');</span>
+<span class="comment">% end</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+guidata(hObject, handles);
+
+
+<span class="comment">% --- Executes on button press in Mototrak_Analysis.</span>
+<span class="keyword">function</span> Mototrak_Analysis_Callback(hObject, eventdata, handles)
+<span class="comment">% hObject    handle to Mototrak_Analysis (see GCBO)</span>
+<span class="comment">% eventdata  reserved - to be defined in a future version of MATLAB</span>
+<span class="comment">% handles    structure with handles and user data (see GUIDATA)</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'watch'</span>)
+<span class="keyword">try</span>
+    MotoTrak_Analysis
+<span class="keyword">catch</span> ME
+    set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+<span class="keyword">end</span>
+<span class="comment">% toc;</span>
+<span class="comment">% if toc &lt;5</span>
+<span class="comment">%     msgbox('Analysis Incomplete!', 'No Analysis');</span>
+<span class="comment">% else</span>
+<span class="comment">%     msgbox('Analysis Complete!', 'Success');</span>
+<span class="comment">% end</span>
+set(handles.figure1, <span class="string">'pointer'</span>, <span class="string">'arrow'</span>)
+guidata(hObject, handles);
+</pre><p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2015a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+function varargout = KnobAnalysis(varargin)
+% KnobAnalysis MATLAB code for KnobAnalysis.fig
+%      KnobAnalysis, by itself, creates a new KnobAnalysis or raises the existing
+%      singleton*.
+%
+%      H = KnobAnalysis returns the handle to a new KnobAnalysis or the handle to
+%      the existing singleton*.
+%
+%      KnobAnalysis('CALLBACK',hObject,eventData,handles,...) calls the local
+%      function named CALLBACK in KnobAnalysis.M with the given input arguments.
+%
+%      KnobAnalysis('Property','Value',...) creates a new KnobAnalysis or raises the
+%      existing singleton*.  Starting from the left, property value pairs are
+%      applied to the GUI before KnobAnalysis_OpeningFcn gets called.  An
+%      unrecognized property name or invalid value makes property application
+%      stop.  All inputs are passed to KnobAnalysis_OpeningFcn via varargin.
+%
+%      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one
+%      instance to run (singleton)".
+%
+% See also: GUIDE, GUIDATA, GUIHANDLES
+
+% Edit the above text to modify the response to help KnobAnalysis
+
+% Last Modified by GUIDE v2.5 29-Mar-2016 12:08:27
+
+% Begin initialization code - DO NOT EDIT
+gui_Singleton = 1;
+gui_State = struct('gui_Name',       mfilename, ...
+                   'gui_Singleton',  gui_Singleton, ...
+                   'gui_OpeningFcn', @KnobAnalysis_OpeningFcn, ...
+                   'gui_OutputFcn',  @KnobAnalysis_OutputFcn, ...
+                   'gui_LayoutFcn',  [] , ...
+                   'gui_Callback',   []);
+if nargin && ischar(varargin{1})
+    gui_State.gui_Callback = str2func(varargin{1});
+end
+
+if nargout
+    [varargout{1:nargout}] = gui_mainfcn(gui_State, varargin{:});
+else
+    gui_mainfcn(gui_State, varargin{:});
+end
+% End initialization code - DO NOT EDIT
+
+% REPLACE_WITH_DASH_DASH- Executes just before KnobAnalysis is made visible.
+function KnobAnalysis_OpeningFcn(hObject, eventdata, handles, varargin)
+% This function has no output args, see OutputFcn.
+% hObject    handle to figure
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% varargin   command line arguments to KnobAnalysis (see VARARGIN)
+
+% Choose default command line output for KnobAnalysis
+handles.output = hObject;
+% Update handles structure
+guidata(hObject, handles);
+
+% UIWAIT makes KnobAnalysis wait for user response (see UIRESUME)
+% uiwait(handles.figure1);
+
+% REPLACE_WITH_DASH_DASH- Outputs from this function are returned to the command line.
+function varargout = KnobAnalysis_OutputFcn(hObject, eventdata, handles) 
+% varargout  cell array for returning output args (see VARARGOUT);
+% hObject    handle to figure
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Get default command line output from handles structure
+varargout{1} = handles.output;
+
+%% Single Animal Functions
+% REPLACE_WITH_DASH_DASH- Executes on button press in Single Animal: Quick Session Info.
+function Quick_Stats_2_Callback(hObject, eventdata, handles)
+% hObject    handle to Quick_Stats_2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.figure1, 'pointer', 'watch')
+try
+    QuickStats
+catch ME
+    set(handles.figure1, 'pointer', 'arrow')
+end
+% toc;
+% if toc <5
+%     msgbox('Analysis Incomplete!', 'No Analysis');
+% else 
+%     msgbox('Analysis Complete!', 'Success');
+% end
+set(handles.figure1, 'pointer', 'arrow')
+guidata(hObject, handles);
+
+% REPLACE_WITH_DASH_DASH- Executes on button press in Single Animal: Detailed Session Info.
+function Detailed_Session_Info2_Callback(hObject, eventdata, handles)
+% hObject    handle to Detailed_Session_Info2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.figure1, 'pointer', 'watch')
+try
+    DetailedStats
+catch ME
+    set(handles.figure1, 'pointer', 'arrow')
+end
+% toc;
+% if toc <5
+%     msgbox('Analysis Incomplete!', 'No Analysis');
+% else 
+%     msgbox('Analysis Complete!', 'Success');
+% end
+set(handles.figure1, 'pointer', 'arrow')
+guidata(hObject, handles);
+
+% REPLACE_WITH_DASH_DASH- Executes on button press in Single Animal: Raw Waveforms.
+function Raw_Waveforms_2_Callback(hObject, eventdata, handles)
+% hObject    handle to Raw_Waveforms_2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.figure1, 'pointer', 'watch')
+try
+    RawWaveformsGUI
+catch ME
+    set(handles.figure1, 'pointer', 'arrow')
+end
+% toc;
+% if toc <5
+%     msgbox('Analysis Incomplete!', 'No Analysis');
+% else 
+%     msgbox('Analysis Complete!', 'Success');
+% end
+set(handles.figure1, 'pointer', 'arrow')
+guidata(hObject, handles);
+
+% REPLACE_WITH_DASH_DASH- Executes on button press in Single Animal: Peaks Program.
+function Peak_Program_Callback(hObject, eventdata, handles)
+% hObject    handle to Peak_Program (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.figure1, 'pointer', 'watch')
+try
+    PeaksProgramGUI
+catch ME
+    set(handles.figure1, 'pointer', 'arrow')
+end
+% toc;
+% if toc <5
+%     msgbox('Analysis Incomplete!', 'No Analysis');
+% else 
+%     msgbox('Analysis Complete!', 'Success');
+% end
+set(handles.figure1, 'pointer', 'arrow')
+guidata(hObject, handles);
+
+% REPLACE_WITH_DASH_DASH- Executes on button press in Single Animal: Pre/Post Lesion.
+function Pre_Post_Lesion_Single_Callback(hObject, eventdata, handles)
+% hObject    handle to Pre_Post_Lesion_Single (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.figure1, 'pointer', 'watch')
+try
+    Knob_Analysis_Viewer_V3
+catch ME
+    set(handles.figure1, 'pointer', 'arrow')
+end
+% toc;
+% if toc <5
+%     msgbox('Analysis Incomplete!', 'No Analysis');
+% else 
+%     msgbox('Analysis Complete!', 'Success');
+% end
+set(handles.figure1, 'pointer', 'arrow')
+guidata(hObject, handles);
+
+% REPLACE_WITH_DASH_DASH- Executes on button press in Single Animal: Progress Tracker.
+function Progress_Tracker_Single_Animal_Callback(hObject, eventdata, handles)
+% hObject    handle to Progress_Tracker_Single_Animal (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.figure1, 'pointer', 'watch')
+try
+    Multi_Animal_Progress_Tracker_V1
+catch ME
+    set(handles.figure1, 'pointer', 'arrow')
+end
+% toc;
+% if toc <5
+%     msgbox('Analysis Incomplete!', 'No Analysis');
+% else 
+%     msgbox('Analysis Complete!', 'Success');
+% end
+set(handles.figure1, 'pointer', 'arrow')
+guidata(hObject, handles);
+
+%% Multi Animal Programs
+% REPLACE_WITH_DASH_DASH- Executes on button press in Multiple Animals: Compare Animals.
+function Compare_Each_Animal_Callback(hObject, eventdata, handles)
+% hObject    handle to Compare_Each_Animal (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.figure1, 'pointer', 'watch')
+try
+    Compare_Each_Animal_V1
+catch ME
+    set(handles.figure1, 'pointer', 'arrow')
+end
+% toc;
+% if toc <5
+%     msgbox('Analysis Incomplete!', 'No Analysis');
+% else 
+%     msgbox('Analysis Complete!', 'Success');
+% end
+set(handles.figure1, 'pointer', 'arrow')
+guidata(hObject, handles);
+
+% REPLACE_WITH_DASH_DASH- Executes on button press in Multiple Animals: Analyze Group.
+function Compare_Animals_Callback(hObject, eventdata, handles)
+% hObject    handle to Compare_Animals (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.figure1, 'pointer', 'watch')
+try
+    Compare_Animals_V1
+catch ME
+    set(handles.figure1, 'pointer', 'arrow')
+end
+set(handles.figure1, 'pointer', 'arrow')
+guidata(hObject, handles);
+
+% REPLACE_WITH_DASH_DASH- Executes on button press in Multiple Animals: Pre/Post Lesion.
+function Pre_Post_Lesion_Callback(hObject, eventdata, handles)
+% hObject    handle to Pre_Post_Lesion (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.figure1, 'pointer', 'watch')
+try
+    Knob_Analysis_Viewer_V3
+catch ME
+    set(handles.figure1, 'pointer', 'arrow')
+end
+% toc;
+% if toc <5
+%     msgbox('Analysis Incomplete!', 'No Analysis');
+% else 
+%     msgbox('Analysis Complete!', 'Success');
+% end
+set(handles.figure1, 'pointer', 'arrow')
+guidata(hObject, handles);
+
+% REPLACE_WITH_DASH_DASH- Executes on button press in Multiple Animals: Progress Tracker.
+function Multi_Animal_Progress_Tracker_Callback(hObject, eventdata, handles)
+% hObject    handle to Multi_Animal_Progress_Tracker (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.figure1, 'pointer', 'watch')
+try
+    Multi_Animal_Progress_Tracker_V1
+catch ME
+    set(handles.figure1, 'pointer', 'arrow')
+end
+% toc;
+% if toc <5
+%     msgbox('Analysis Incomplete!', 'No Analysis');
+% else 
+%     msgbox('Analysis Complete!', 'Success');
+% end
+set(handles.figure1, 'pointer', 'arrow')
+guidata(hObject, handles);
+
+
+%% Reset pointer
+% REPLACE_WITH_DASH_DASH- Executes on button press in Reset_Pointer.
+function Reset_Pointer_Callback(hObject, eventdata, handles)
+% hObject    handle to Reset_Pointer (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.figure1, 'pointer', 'arrow')
+guidata(hObject, handles);
+
+%% Knob Peak Finder - required for data extraction algorithms
+function [pks, sig] = Knob_Peak_Finder(signal)
+%This code finds and kicks out peaks that have a std dev between
+%them less than 1
+
+smoothed_signal = boxsmooth(signal);                                        %smooth out the trial signal
+[pks, sig] = findpeaks(smoothed_signal, 'MINPEAKHEIGHT', 5, ...
+    'MINPEAKDISTANCE', 10);                                            %Find local maximma
+n = length(pks);
+j = 1;
+if n>1
+    while j <= n-1
+        if (abs(pks(j)-pks(j+1)) <= 5)                                 % if the diff between 2 peaks is less than or equal to 5
+            start_sig = sig(j);
+            end_sig = sig(j+1);
+            
+            signal_interest = smoothed_signal(start_sig:end_sig);
+            deviation_signal = std(signal_interest);
+            
+            if deviation_signal < 1
+                pks(j+1) = [];
+                sig(j+1) = [];
+                j = j-1;
+            end
+            
+        end
+        n = length(pks);
+        j = j+1;
+    end
+end
+
+
+% REPLACE_WITH_DASH_DASH- Executes on button press in Inactivation_Analysis.
+function Inactivation_Analysis_Callback(hObject, eventdata, handles)
+% hObject    handle to Inactivation_Analysis (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.figure1, 'pointer', 'watch')
+try
+    InactivationProgram_V2
+catch ME
+    set(handles.figure1, 'pointer', 'arrow')
+end
+% toc;
+% if toc <5
+%     msgbox('Analysis Incomplete!', 'No Analysis');
+% else 
+%     msgbox('Analysis Complete!', 'Success');
+% end
+set(handles.figure1, 'pointer', 'arrow')
+guidata(hObject, handles);
+
+
+% REPLACE_WITH_DASH_DASH- Executes on button press in Mototrak_Analysis.
+function Mototrak_Analysis_Callback(hObject, eventdata, handles)
+% hObject    handle to Mototrak_Analysis (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.figure1, 'pointer', 'watch')
+try
+    MotoTrak_Analysis
+catch ME
+    set(handles.figure1, 'pointer', 'arrow')
+end
+% toc;
+% if toc <5
+%     msgbox('Analysis Incomplete!', 'No Analysis');
+% else 
+%     msgbox('Analysis Complete!', 'Success');
+% end
+set(handles.figure1, 'pointer', 'arrow')
+guidata(hObject, handles);
+
+##### SOURCE END #####
+--></body></html>
