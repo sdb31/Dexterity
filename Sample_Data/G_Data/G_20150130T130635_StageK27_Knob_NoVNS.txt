@@ -1,0 +1,13 @@
+Subject:	G
+Date:	01/30/2015
+Stage:	K27: 75 degrees
+Device:	Knob
+Device Position:	1.250000
+Constraint:	None
+Trial Initiation Threshold:	5.00 degrees (total)
+Hit Threshold:	75.00 degrees (total)
+Hit Window:	2.00 s
+
+Overall Hit Rate:	93.29%
+Hits:	139
+Misses:	10
