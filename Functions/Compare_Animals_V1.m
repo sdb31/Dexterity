@@ -226,7 +226,7 @@ Hit_SE = nanstd(Hit_Final')./sqrt(Number_of_Animals);
 figure(2); clf;
 Success_Rate = bar(Hit_GM); Success_Rate.FaceColor = [.6 .6 .6];
 ylabel('Success Rate (%)'); 
-set(gca, 'XTickLabel', XTickLabels, 'TickDir', 'out');
+set(gca, 'XTickLabel', XTickLabels, 'TickDir', 'out', 'YLim', [0 100]);
 title('Success Rate for Group');
 hold on;
 errorbar(1:length(Sessions_Per_Week), Hit_GM, zeros(1,length(Sessions_Per_Week)), Hit_SE,...
