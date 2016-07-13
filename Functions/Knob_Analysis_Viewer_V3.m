@@ -126,9 +126,6 @@ set(handles.session_list_post, 'callback', @SessionSelectPost);
 
 guidata(handles.fig,handles);
 
-
-
-
 %% This sub function plots data
 function PlotData(handles,preorpost,parameter,cur_animal)
 
