@@ -1,5 +1,4 @@
-function MotoTrak_Analysis
-
+function MotoTrak_Analysis2
 %% Find the path containing the MotoTrak Analysis program.
 if isdeployed                                                               %If this is deployed code...
     progpath = [pwd '\'];                                                   %The default data path will begin with the current directory...
@@ -134,14 +133,6 @@ data = data(i);                                                             %Sor
 devices = unique({data.device});                                            %Grab the unique device names across all sessions.
 
 %% Create interactive figures for each of the device types.
-% f = figure('Toolbar', 'none', 'Menubar', 'none', 'Name', 'Tabbed GUI',...
-%     'Numbertitle', 'off');
-% tgroup = uitabgroup('Parent', f);
-% tabs = rat_list;
-% for i = 1:length(tabs);
-%     uitab('Parent', tgroup, 'Title', tabs{i});
-% end
-
 for d = 1:length(devices)                                                   %Step through the devices.
     s = strcmpi({data.device},devices{d});                                  %Find all sessions with each device.
     rats = unique({data(s).rat});                                           %Find all of the unique rat names that have used this device.
@@ -201,21 +192,20 @@ for d = 1:length(devices)                                                   %Ste
     end
     for r = 1:length(plotdata)                                                  %Step through each rat.
         clear dates
-        plotdata(r).times = plotdata(r).times';
-        for i = 1:size(plotdata(r).times,1)                                         %Step through each timepoint.
-            if rem(plotdata(r).times(i,1),1) ~= 0                                   %If the timestamp is a fractional number of days...
-                temp = datestr(plotdata(r).times(i,1),'mm/dd/yyyy, HH:MM');         %Show the date and the time.
-            elseif plotdata(r).x(i,2) - plotdata(r).x(i,1) == 1                 %If the timestamps only cover one day...
-                temp = datestr(plotdata(r).times(i,1),'mm/dd/yyyy');                %Show only the date.
+        plotdata2(r).times = plotdata(r).times';
+        for i = 1:size(plotdata2(r).times,1)                                         %Step through each timepoint.
+            if rem(plotdata2(r).times(i,1),1) ~= 0                                   %If the timestamp is a fractional number of days...
+                temp = datestr(plotdata2(r).times(i,1),'mm/dd/yyyy, HH:MM');         %Show the date and the time.
+            elseif plotdata2(r).x(i,2) - plotdata2(r).x(i,1) == 1                 %If the timestamps only cover one day...
+                temp = datestr(plotdata2(r).times(i,1),'mm/dd/yyyy');                %Show only the date.
             else                                                                %Otherwise...
-                temp = [datestr(plotdata(r).times(i,1),'mm/dd/yyyy') '-' ...
-                    datestr(plotdata(r).times(i,2)-1,'mm/dd/yyyy')];                %Show the date range.
+                temp = [datestr(plotdata2(r).times(i,1),'mm/dd/yyyy') '-' ...
+                    datestr(plotdata2(r).times(i,2)-1,'mm/dd/yyyy')];                %Show the date range.
             end
             dates{i} = temp;
         end
         FinalDates{r} = dates{end};
     end
-    
     pos = get(0,'Screensize');                                              %Grab the screensize.
     h = 10;                                                                 %Set the height of the figure, in centimeters.
     w = 15;                                                                 %Set the width of the figure, in centimeters.
@@ -230,82 +220,48 @@ for d = 1:length(devices)                                                   %Ste
         laststages(i) = plotdata(i).stage(length(plotdata(i).stage));
         numberofsessions(i) = length(plotdata(i).stage);
         AnimalName(i) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', sprintf('Animal Name: %s', tabs{i}), ...
-            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.1 .9 .4 .05],...
-            'Fontsize', 10, 'Fontweight', 'bold') ;
+            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .9 .4 .05],...
+            'Fontsize', 10, 'Fontweight', 'normal') ;
         LastSessionRun(i) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', sprintf('Last Session Run: %s', laststages{i}), ...
-            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.1 .82 .6 .05],...
-            'Fontsize', 10, 'Fontweight', 'bold') ;
+            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .82 .6 .05],...
+            'Fontsize', 10, 'Fontweight', 'normal') ;
         LastDateRun(i) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', sprintf('Last Date Run: %s', FinalDates{i}), ...
-            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.1 .74 .4 .05],...
-            'Fontsize', 10, 'Fontweight', 'bold') ;
+            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .74 .4 .05],...
+            'Fontsize', 10, 'Fontweight', 'normal') ;
         NumberOfSessions(i) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', sprintf('Number of Sessions: %d', numberofsessions(i)), ...
-            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.1 .66 .4 .05],...
-            'Fontsize', 10, 'Fontweight', 'bold') ;
+            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .66 .4 .05],...
+            'Fontsize', 10, 'Fontweight', 'normal') ;
         DevicesRuns(d) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', sprintf('Devices: %s', devices{d}), ...
-            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.1 .58 .4 .05],...
-            'Fontsize', 10, 'Fontweight', 'bold') ;
+            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .58 .4 .05],...
+            'Fontsize', 10, 'Fontweight', 'normal') ;
         Timeline(i) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', 'Timeline', ...
             'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .48 .4 .05],...
             'Fontsize', 10, 'Fontweight', 'bold') ;
+        General_Analysis(i) = uicontrol('Parent', tab(i),'style','pushbutton','string','General Analysis','HorizontalAlignment', 'left',...
+            'units','normalized','position',[.65 .75 .25 .15],'fontsize',10);    
         hold on;
         ax = axes('Parent', tab(i), 'units','normalized','position',[.03 .3 .94 .1 ],'Visible', 'off'); 
         line([0, 1], [1, 1], 'Parent', ax, 'linewidth', 2, 'color', 'k')
         hold off;
     end
-   
-    %% Create a figure.
-%     ui_h = 0.07*h;                                                          %Set the heigh of the uicontrols.
-%     fontsize = 0.6*28.34*ui_h;                                              %Set the fontsize for all uicontrols.
-%     sp1 = 0.02*h;                                                           %Set the vertical spacing between axes and uicontrols.
-%     sp2 = 0.01*w;                                                           %Set the horizontal spacing between axes and uicontrols.
-%     pos = [7*sp2,3*sp1,w-8*sp2,h-ui_h-5*sp1];                               %Set the position of the axes.
-% %     ax = axes('units','centimeters','position',pos,'box','on',...
-% %         'linewidth',2);                                                     %Create axes for showing the log events histogram.
-%     obj = zeros(1,5);                                                       %Create a matrix to hold timescale uicontrol handles.
-%     str = {'Overall Hit Rate',...
-%         'Total Trial Count',...
-%         'Mean Peak Force',...
-%         'Median Peak Force',...
-%         'Trial Count',...
-%         'Hits in First 5 Minutes',...
-%         'Trials in First 5 Minutes',...
-%         'Max. Hits in Any 5 Minutes',...
-%         'Max. Trials in Any 5 Minutes',...
-%         'Max. Hit Rate in Any 5 Minutes',...
-%         'Min. Inter-Trial Interval (Smoothed)',...
-%         'Mean Peak Impulse',...
-%         'Median Peak Impulse'};                                             %List the available plots for the pull data.
-%     if any(strcmpi(devices{d},{'knob','lever'}))                            %If we're plotting knob data...
-%         str(2:3) = {'Mean Peak Angle','Median Peak Angle'};                 %Set the plots to show "angle" instead of "force".
-%     elseif ~any(strcmpi(devices{d},{'knob','lever','pull'}))                %Otherwise, if this isn't pull, knob, or lever data...
-%         str(2:3) = {'Mean Signal Peak','Median Signal Peak'};               %Set the plots to show "signal" instead of "peak force".
-%     end
-%     pos = [sp2, h-sp1-ui_h, 2*(w-6*sp2)/6, ui_h];                           %Set the position for the pop-up menu.
-%     obj(1) = uicontrol(fig,'style','popup','string',str,...
-%         'units','centimeters','position',pos,'fontsize',fontsize);      %Create pushbuttons for selecting the timescale.
-%     str = {'Session','Daily','Weekly','Export'};                            %List the timescale labels.
-%     for i = 2:5                                                             %Step through the 3 timescales.
-%         pos = [i*sp2+i*(w-6*sp2)/6, h-sp1-ui_h, (w-6*sp2)/6, ui_h];         %Set the position for each pushbutton.
-%         obj(i) = uicontrol(fig,'style','pushbutton','string',str{i-1},...
-%             'units','centimeters','position',pos,'fontsize',fontsize);      %Create pushbuttons for selecting the timescale.
-%     end
-%     set(obj(1),'callback',{@Set_Plot_Type,obj});                            %Set the callback for the pop-up menu.
-%     set(obj(2:4),'callback',{@Plot_Timeline,obj,[]});                       %Set the callback for the timescale buttons.
-%     set(obj(5),'callback',{@Export_Data,ax,obj});                           %Set the callback for the export button.
-%     set(fig,'userdata',plotdata);                                           %Save the plot data to the figure's 'UserData' property.
-%     Plot_Timeline(obj(2),[],obj,[]);                                        %Call the function to plot the session data in the figure.
-%     set(fig,'ResizeFcn',{@Resize,ax,obj});                                  %Set the Resize function for the figure.
 end
+tabNumber = find(tgroup.SelectedTab == tab)
+set(General_Analysis, 'callback', @GeneralAnalysis);
+set(fig,'userdata',plotdata);
+
+function GeneralAnalysis
+
 
 
 %% This function is called when the user selects a plot type in the pop-up menu.
 function Set_Plot_Type(~,~,obj)
 i = strcmpi(get(obj,'fontweight'),'bold');                                  %Find the pushbutton with the bold fontweight.
-Plot_Timeline(obj(i),[],obj,[]);                                            %Call the subfunction to plot the data by the appropriate timeline.
+
+Plot_Timeline(obj(i),[],obj,[],TabNumber);                                            %Call the subfunction to plot the data by the appropriate timeline.
 
 
 %% This subfunction sorts the data into single-session values and sends it to the plot function.
-function Plot_Timeline(hObject,~,obj,fid)
+function Plot_Timeline(hObject,~,obj,fid,TabNumber)
 set(hObject,'fontweight','bold','foregroundcolor',[0 0.5 0]);               %Make this pushbutton's text bold.
 set(setdiff(obj(2:4),hObject),'fontweight','normal','foregroundcolor','k'); %Make the other pushbutton's text normal and black.
 fig = get(hObject,'parent');                                                %Grab the parent figure of the pushbutton.
@@ -382,7 +338,7 @@ end
 ax = get(fig,'children');                                                   %Grab all children of the figure.
 ax(~strcmpi(get(ax,'type'),'axes')) = [];                                   %Kick out all non-axes objects.
 if isempty(fid)                                                             %If no text file handle was passed to this function...
-    Make_Plot(plotdata,ax,str);                                             %Call the subfunction to make the plot.
+    Make_Plot(plotdata,ax,str,TabNumber);                                             %Call the subfunction to make the plot.
 else                                                                        %Otherwise...
     t = vertcat(plotdata.x);                                                %Vertically concatenate all time-points.
     t = unique(t,'rows');                                                   %Find all unique rows of the timepoints.
@@ -486,38 +442,38 @@ end
 
 
 %% This section plots session/daily/weekly data in the specified axes.
-function Make_Plot(plotdata,ax,str)
-% fig = get(ax,'parent');                                                     %Grab the figure handle for the axes' parent.
-% set(fig,'units','centimeters');                                             %Set the figure's units to centimeters.
-% temp = get(fig,'position');                                                 %Grab the figure position.
-% h = temp(4);                                                                %Grab the figure height, in centimeters.
-% linewidth = 0.1*h;                                                          %Set the linewidth for the plots.
-% markersize = 0.75*h;                                                        %Set the marker size for the plots.
-% fontsize = 0.6*h;                                                           %Set the fontsize for all text objects.
-% cla(ax);                                                                    %Clear the axes.
-% colors = hsv(length(plotdata));                                             %Grab unique colors for all the rats.
-% hoverdata = struct([]);                                                     %Create an empty structure to hold data for the MouseHover function.
-for r = 1:length(plotdata)                                                  %Step through each rat.
-%     line(mean(plotdata(r).x,2),plotdata(r).y,'color',colors(r,:),...
-%         'linewidth',linewidth,'userdata',1,'parent',ax);                    %Show the rat's performance as a thick line.
-    for i = 1:size(plotdata(r).x,1)                                         %Step through each timepoint.
-%         l = line(mean(plotdata(r).x(i,:)),plotdata(r).y(i),...
-%             'markeredgecolor',colors(r,:),'linestyle','none',...
-%             'markerfacecolor',colors(r,:),'marker','.',...
-%             'linewidth',linewidth,'markersize',markersize,'userdata',2,...
-%             'parent',ax);                                                   %Mark each session with a unique marker.        
-        hoverdata(end+1).xy = [mean(plotdata(r).x(i,:)),plotdata(r).y(i)];  %Save the x- and y-coordinates.
-        if rem(plotdata(r).x(i,1),1) ~= 0                                   %If the timestamp is a fractional number of days...
-            temp = datestr(plotdata(r).x(i,1),'mm/dd/yyyy, HH:MM');         %Show the date and the time.
-        elseif plotdata(r).x(i,2) - plotdata(r).x(i,1) == 1                 %If the timestamps only cover one day...
-            temp = datestr(plotdata(r).x(i,1),'mm/dd/yyyy');                %Show only the date.
+function Make_Plot(plotdata,ax,str, TabNumber)
+fig = get(ax,'parent');                                                     %Grab the figure handle for the axes' parent.
+set(fig,'units','centimeters');                                             %Set the figure's units to centimeters.
+temp = get(fig,'position');                                                 %Grab the figure position.
+h = temp(4);                                                                %Grab the figure height, in centimeters.
+linewidth = 0.1*h;                                                          %Set the linewidth for the plots.
+markersize = 0.75*h;                                                        %Set the marker size for the plots.
+fontsize = 0.6*h;                                                           %Set the fontsize for all text objects.
+cla(ax);                                                                    %Clear the axes.
+colors = hsv(length(plotdata));                                             %Grab unique colors for all the rats.
+hoverdata = struct([]);                                                     %Create an empty structure to hold data for the MouseHover function.
+for r = 1:length(TabNumber)                                                  %Step through each rat.
+    line(mean(plotdata(TabNumber).x,2),plotdata(TabNumber).y,'color',colors(TabNumber,:),...
+        'linewidth',linewidth,'userdata',1,'parent',ax);                    %Show the rat's performance as a thick line.
+    for i = 1:size(plotdata(TabNumber).x,1)                                         %Step through each timepoint.
+        l = line(mean(plotdata(TabNumber).x(i,:)),plotdata(TabNumber).y(i),...
+            'markeredgecolor',colors(TabNumber,:),'linestyle','none',...
+            'markerfacecolor',colors(TabNumber,:),'marker','.',...
+            'linewidth',linewidth,'markersize',markersize,'userdata',2,...
+            'parent',ax);                                                   %Mark each session with a unique marker.        
+        hoverdata(end+1).xy = [mean(plotdata(TabNumber).x(i,:)),plotdata(TabNumber).y(i)];  %Save the x- and y-coordinates.
+        if rem(plotdata(TabNumber).x(i,1),1) ~= 0                                   %If the timestamp is a fractional number of days...
+            temp = datestr(plotdata(TabNumber).x(i,1),'mm/dd/yyyy, HH:MM');         %Show the date and the time.
+        elseif plotdata(TabNumber).x(i,2) - plotdata(TabNumber).x(i,1) == 1                 %If the timestamps only cover one day...
+            temp = datestr(plotdata(TabNumber).x(i,1),'mm/dd/yyyy');                %Show only the date.
         else                                                                %Otherwise...
-            temp = [datestr(plotdata(r).x(i,1),'mm/dd/yyyy') '-' ...
-                datestr(plotdata(r).x(i,2)-1,'mm/dd/yyyy')];                %Show the date range.
+            temp = [datestr(plotdata(TabNumber).x(i,1),'mm/dd/yyyy') '-' ...
+                datestr(plotdata(TabNumber).x(i,2)-1,'mm/dd/yyyy')];                %Show the date range.
         end
-        hoverdata(end).txt = {plotdata(r).rat,plotdata(r).s{i},...
-            temp,plotdata(r).n{i}};                                         %Save the rat's name, stage, date, and hit rate/num trials.
-%         hoverdata(end).handles = l;                                         %Save the line handle for the point.
+        hoverdata(end).txt = {plotdata(TabNumber).rat,plotdata(TabNumber).s{i},...
+            temp,plotdata(TabNumber).n{i}};                                         %Save the rat's name, stage, date, and hit rate/num trials.
+        hoverdata(end).handles = l;                                         %Save the line handle for the point.
     end
 end
 temp = vertcat(hoverdata.xy);                                               %Grab all of the datapoint coordinates.
@@ -539,21 +495,21 @@ if y(1) == y(2)                                                             %If 
     y = y + [-0.1, 0.1];                                                    %Add 0.1 to each side of the single point.
 end
 ylim(ax,y);                                                                 %Set the y-axis limits.
-% set(ax,'xticklabel',datestr(get(ax,'xtick'),'mm/dd'),...
-%     'fontsize',fontsize,'fontweight','bold','linewidth',linewidth);         %Show the date for each x-axis tick.
-% ylabel(ax,str,'fontweight','bold','fontsize',1.1*fontsize);                 %Label the x-axis.
-% temp = get(ax,'ytick');                                                     %Grab the y-axis ticks.
-% for i = 1:length(temp)                                                      %Step through the y-axis ticks.
-%     temp(i) = line(xlim(ax),temp(i)*[1,1],'color',[0.75 0.75 0.75],...
-%         'linestyle','--','linewidth',0.5*linewidth,'userdata',3,...
-%         'parent',ax);                                                       %Draw a gridline at each y-tick.
-% end
-% uistack(temp,'bottom');                                                     %Send all grid lines to the bottom.
-% txt = text(x(1),y(1),' ','fontsize',fontsize,'margin',2,...
-%     'backgroundcolor','w','edgecolor','k','visible','off',...
-%     'verticalalignment','bottom','horizontalalignment','center',...
-%     'userdata',4);                                                          %Create a text object for labeling points.
-% set(fig,'WindowButtonMotionFcn',{@MouseHover,ax,hoverdata,txt});            %Set the mouse hover function for the figure.
+set(ax,'xticklabel',datestr(get(ax,'xtick'),'mm/dd'),...
+    'fontsize',fontsize,'fontweight','bold','linewidth',linewidth);         %Show the date for each x-axis tick.
+ylabel(ax,str,'fontweight','bold','fontsize',1.1*fontsize);                 %Label the x-axis.
+temp = get(ax,'ytick');                                                     %Grab the y-axis ticks.
+for i = 1:length(temp)                                                      %Step through the y-axis ticks.
+    temp(i) = line(xlim(ax),temp(i)*[1,1],'color',[0.75 0.75 0.75],...
+        'linestyle','--','linewidth',0.5*linewidth,'userdata',3,...
+        'parent',ax);                                                       %Draw a gridline at each y-tick.
+end
+uistack(temp,'bottom');                                                     %Send all grid lines to the bottom.
+txt = text(x(1),y(1),' ','fontsize',fontsize,'margin',2,...
+    'backgroundcolor','w','edgecolor','k','visible','off',...
+    'verticalalignment','bottom','horizontalalignment','center',...
+    'userdata',4);                                                          %Create a text object for labeling points.
+set(fig,'WindowButtonMotionFcn',{@MouseHover,ax,hoverdata,txt});            %Set the mouse hover function for the figure.
 
 
 %% This function executes while the mouse hovers over the axes of an interactive figure.
