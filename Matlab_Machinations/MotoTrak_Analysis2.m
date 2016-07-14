@@ -31,12 +31,9 @@ end
 
 %% Have the user select rats to include or exclude in the analysis.
 rats = files;                                                               %Copy the filenames to another cell array.
-rats2 = files;
 for r = 1:length(rats)                                                      %Step through each file.
     rats{r}(1:find(rats{r} == '\' | rats{r} == '/',1,'last')) = [];         %Kick out the path from the filename.
-    rats2{r}(1:find(rats2{r} == '\' | rats2{r} == '/',1,'last')) = [];         %Kick out the path from the filename.
     i = strfind(rats{r},'_20');                                             %Find the start of the timestamp.
-    k = strfind(rats2{r},'_Kn');
     if isempty(i) || length(i) > 1                                          %If no timestamp was found in the filename, or multiple timestamps were found...
         rats{r} = [];                                                       %Set the rat name to empty brackets.
     else                                                                    %Otherwise...
@@ -238,30 +235,77 @@ for d = 1:length(devices)                                                   %Ste
             'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .48 .4 .05],...
             'Fontsize', 10, 'Fontweight', 'bold') ;
         General_Analysis(i) = uicontrol('Parent', tab(i),'style','pushbutton','string','General Analysis','HorizontalAlignment', 'left',...
-            'units','normalized','position',[.65 .75 .25 .15],'fontsize',10);    
+            'units','normalized','position',[.65 .75 .25 .15],'fontsize',10, 'callback', {@GeneralAnalysis,devices(d)},'userdata',plotdata(i));    
         hold on;
         ax = axes('Parent', tab(i), 'units','normalized','position',[.03 .3 .94 .1 ],'Visible', 'off'); 
         line([0, 1], [1, 1], 'Parent', ax, 'linewidth', 2, 'color', 'k')
         hold off;
     end
 end
-tabNumber = find(tgroup.SelectedTab == tab)
-set(General_Analysis, 'callback', @GeneralAnalysis);
-set(fig,'userdata',plotdata);
+% tabNumber = find(tgroup.SelectedTab == tab);
+% set(General_Analysis, 'callback', @GeneralAnalysis);
+% set(fig,'userdata',plotdata);
 
-function GeneralAnalysis
-
-
-
+function GeneralAnalysis(hObject,~,devices)
+data = hObject.UserData;
+pos = get(0,'Screensize');                                              %Grab the screensize.
+h = 10;                                                                 %Set the height of the figure, in centimeters.
+w = 15;                                                                 %Set the width of the figure, in centimeters.
+[PeakVelocity,Latency] = DetailedStats(files);
+for d = 1:length(devices)                                                   %Step through the devices.
+    fig = figure('numbertitle','off','units','centimeters',...
+        'name',['MotoTrak Analysis: ' devices{d}],'menubar','none',...
+        'position',[pos(3)/2-w/2, pos(4)/2-h/2, w, h]);                     %Create a figure.
+    ui_h = 0.07*h;                                                          %Set the heigh of the uicontrols.
+    fontsize = 0.6*28.34*ui_h;                                              %Set the fontsize for all uicontrols.
+    sp1 = 0.02*h;                                                           %Set the vertical spacing between axes and uicontrols.
+    sp2 = 0.01*w;                                                           %Set the horizontal spacing between axes and uicontrols.
+    pos = [7*sp2,3*sp1,w-8*sp2,h-ui_h-5*sp1];                               %Set the position of the axes.
+    ax = axes('units','centimeters','position',pos,'box','on',...
+        'linewidth',2);                                                     %Create axes for showing the log events histogram.
+    obj = zeros(1,5);                                                       %Create a matrix to hold timescale uicontrol handles.
+    str = {'Overall Hit Rate',...
+        'Total Trial Count',...
+        'Mean Peak Force',...
+        'Median Peak Force',...
+        'Trial Count',...
+        'Hits in First 5 Minutes',...
+        'Trials in First 5 Minutes',...
+        'Max. Hits in Any 5 Minutes',...
+        'Max. Trials in Any 5 Minutes',...
+        'Max. Hit Rate in Any 5 Minutes',...
+        'Min. Inter-Trial Interval (Smoothed)',...
+        'Mean Peak Impulse',...
+        'Median Peak Impulse'};                                             %List the available plots for the pull data.
+    if any(strcmpi(devices{d},{'knob','lever'}))                            %If we're plotting knob data...
+        str(2:3) = {'Mean Peak Angle','Median Peak Angle'};                 %Set the plots to show "angle" instead of "force".
+    elseif ~any(strcmpi(devices{d},{'knob','lever','pull'}))                %Otherwise, if this isn't pull, knob, or lever data...
+        str(2:3) = {'Mean Signal Peak','Median Signal Peak'};               %Set the plots to show "signal" instead of "peak force".
+    end
+    pos = [sp2, h-sp1-ui_h, 2*(w-6*sp2)/6, ui_h];                           %Set the position for the pop-up menu.
+    obj(1) = uicontrol(fig,'style','popup','string',str,...
+        'units','centimeters','position',pos,'fontsize',fontsize);      %Create pushbuttons for selecting the timescale.
+    str = {'Session','Daily','Weekly','Export'};                            %List the timescale labels.
+    for i = 2:5                                                             %Step through the 3 timescales.
+        pos = [i*sp2+i*(w-6*sp2)/6, h-sp1-ui_h, (w-6*sp2)/6, ui_h];         %Set the position for each pushbutton.
+        obj(i) = uicontrol(fig,'style','pushbutton','string',str{i-1},...
+            'units','centimeters','position',pos,'fontsize',fontsize);      %Create pushbuttons for selecting the timescale.
+    end
+    set(obj(1),'callback',{@Set_Plot_Type,obj});                            %Set the callback for the pop-up menu.
+    set(obj(2:4),'callback',{@Plot_Timeline,obj,[]});                       %Set the callback for the timescale buttons.
+    set(obj(5),'callback',{@Export_Data,ax,obj});                           %Set the callback for the export button.
+    set(fig,'userdata',data);                                           %Save the plot data to the figure's 'UserData' property.
+    Plot_Timeline(obj(2),[],obj,[]);                                        %Call the function to plot the session data in the figure.
+    set(fig,'ResizeFcn',{@Resize,ax,obj});
+end
 %% This function is called when the user selects a plot type in the pop-up menu.
 function Set_Plot_Type(~,~,obj)
 i = strcmpi(get(obj,'fontweight'),'bold');                                  %Find the pushbutton with the bold fontweight.
-
-Plot_Timeline(obj(i),[],obj,[],TabNumber);                                            %Call the subfunction to plot the data by the appropriate timeline.
+Plot_Timeline(obj(i),[],obj,[]);                                            %Call the subfunction to plot the data by the appropriate timeline.
 
 
 %% This subfunction sorts the data into single-session values and sends it to the plot function.
-function Plot_Timeline(hObject,~,obj,fid,TabNumber)
+function Plot_Timeline(hObject,~,obj,fid)
 set(hObject,'fontweight','bold','foregroundcolor',[0 0.5 0]);               %Make this pushbutton's text bold.
 set(setdiff(obj(2:4),hObject),'fontweight','normal','foregroundcolor','k'); %Make the other pushbutton's text normal and black.
 fig = get(hObject,'parent');                                                %Grab the parent figure of the pushbutton.
@@ -338,7 +382,7 @@ end
 ax = get(fig,'children');                                                   %Grab all children of the figure.
 ax(~strcmpi(get(ax,'type'),'axes')) = [];                                   %Kick out all non-axes objects.
 if isempty(fid)                                                             %If no text file handle was passed to this function...
-    Make_Plot(plotdata,ax,str,TabNumber);                                             %Call the subfunction to make the plot.
+    Make_Plot(plotdata,ax,str);                                             %Call the subfunction to make the plot.
 else                                                                        %Otherwise...
     t = vertcat(plotdata.x);                                                %Vertically concatenate all time-points.
     t = unique(t,'rows');                                                   %Find all unique rows of the timepoints.
@@ -442,7 +486,7 @@ end
 
 
 %% This section plots session/daily/weekly data in the specified axes.
-function Make_Plot(plotdata,ax,str, TabNumber)
+function Make_Plot(plotdata,ax,str)
 fig = get(ax,'parent');                                                     %Grab the figure handle for the axes' parent.
 set(fig,'units','centimeters');                                             %Set the figure's units to centimeters.
 temp = get(fig,'position');                                                 %Grab the figure position.
@@ -453,26 +497,26 @@ fontsize = 0.6*h;                                                           %Set
 cla(ax);                                                                    %Clear the axes.
 colors = hsv(length(plotdata));                                             %Grab unique colors for all the rats.
 hoverdata = struct([]);                                                     %Create an empty structure to hold data for the MouseHover function.
-for r = 1:length(TabNumber)                                                  %Step through each rat.
-    line(mean(plotdata(TabNumber).x,2),plotdata(TabNumber).y,'color',colors(TabNumber,:),...
+for r = 1:length(plotdata)                                                  %Step through each rat.
+    line(mean(plotdata(r).x,2),plotdata(r).y,'color',colors(r,:),...
         'linewidth',linewidth,'userdata',1,'parent',ax);                    %Show the rat's performance as a thick line.
-    for i = 1:size(plotdata(TabNumber).x,1)                                         %Step through each timepoint.
-        l = line(mean(plotdata(TabNumber).x(i,:)),plotdata(TabNumber).y(i),...
-            'markeredgecolor',colors(TabNumber,:),'linestyle','none',...
-            'markerfacecolor',colors(TabNumber,:),'marker','.',...
+    for i = 1:size(plotdata(r).x,1)                                         %Step through each timepoint.
+        l = line(mean(plotdata(r).x(i,:)),plotdata(r).y(i),...
+            'markeredgecolor',colors(r,:),'linestyle','none',...
+            'markerfacecolor',colors(r,:),'marker','.',...
             'linewidth',linewidth,'markersize',markersize,'userdata',2,...
             'parent',ax);                                                   %Mark each session with a unique marker.        
-        hoverdata(end+1).xy = [mean(plotdata(TabNumber).x(i,:)),plotdata(TabNumber).y(i)];  %Save the x- and y-coordinates.
-        if rem(plotdata(TabNumber).x(i,1),1) ~= 0                                   %If the timestamp is a fractional number of days...
-            temp = datestr(plotdata(TabNumber).x(i,1),'mm/dd/yyyy, HH:MM');         %Show the date and the time.
-        elseif plotdata(TabNumber).x(i,2) - plotdata(TabNumber).x(i,1) == 1                 %If the timestamps only cover one day...
-            temp = datestr(plotdata(TabNumber).x(i,1),'mm/dd/yyyy');                %Show only the date.
+        hoverdata(end+1).xy = [mean(plotdata(r).x(i,:)),plotdata(r).y(i)];  %Save the x- and y-coordinates.
+        if rem(plotdata(r).x(i,1),1) ~= 0                                   %If the timestamp is a fractional number of days...
+            temp = datestr(plotdata(r).x(i,1),'mm/dd/yyyy, HH:MM');         %Show the date and the time.
+        elseif plotdata(r).x(i,2) - plotdata(r).x(i,1) == 1                 %If the timestamps only cover one day...
+            temp = datestr(plotdata(r).x(i,1),'mm/dd/yyyy');                %Show only the date.
         else                                                                %Otherwise...
-            temp = [datestr(plotdata(TabNumber).x(i,1),'mm/dd/yyyy') '-' ...
-                datestr(plotdata(TabNumber).x(i,2)-1,'mm/dd/yyyy')];                %Show the date range.
+            temp = [datestr(plotdata(r).x(i,1),'mm/dd/yyyy') '-' ...
+                datestr(plotdata(r).x(i,2)-1,'mm/dd/yyyy')];                %Show the date range.
         end
-        hoverdata(end).txt = {plotdata(TabNumber).rat,plotdata(TabNumber).s{i},...
-            temp,plotdata(TabNumber).n{i}};                                         %Save the rat's name, stage, date, and hit rate/num trials.
+        hoverdata(end).txt = {plotdata(r).rat,plotdata(r).s{i},...
+            temp,plotdata(r).n{i}};                                         %Save the rat's name, stage, date, and hit rate/num trials.
         hoverdata(end).handles = l;                                         %Save the line handle for the point.
     end
 end
@@ -601,3 +645,125 @@ set(obj(i),'fontsize',fontsize);                                            %Set
 set(ax,'fontsize',fontsize,'linewidth',linewidth);                          %Set the axes linewidth and fontsize.
 temp = get(ax,'ylabel');                                                    %Grab the y-axis label handle for the axes.
 set(temp,'fontsize',1.1*fontsize);                                          %Set the font size for y-axis label.
+
+%% Knob Peak Finder
+function [pks, sig] = Knob_Peak_Finder(signal)
+%This code finds and kicks out peaks that have a std dev between
+%them less than 1
+
+smoothed_signal = boxsmooth(signal);                                        %smooth out the trial signal
+[pks, sig] = findpeaks(smoothed_signal, 'MINPEAKHEIGHT', 5, ...
+    'MINPEAKDISTANCE', 10);                                            %Find local maximma
+n = length(pks);
+j = 1;
+if n>1
+    while j <= n-1
+        if (abs(pks(j)-pks(j+1)) <= 5)                                 % if the diff between 2 peaks is less than or equal to 5
+            start_sig = sig(j);
+            end_sig = sig(j+1);
+            
+            signal_interest = smoothed_signal(start_sig:end_sig);
+            deviation_signal = std(signal_interest);
+            
+            if deviation_signal < 1
+                pks(j+1) = [];
+                sig(j+1) = [];
+                j = j-1;
+            end
+            
+        end
+        n = length(pks);
+        j = j+1;
+    end
+end
+
+%% Detailed Stats
+function [PeakVelocity,Latency] = DetailedStats(files)
+%ARDYMOTOR2TEXT.m - Rennaker Neural Engineering Lab, 2013
+%
+%   ARDYMOTOR2TEXT has the user select one or multiple *.ArdyMotor files
+%   and then exports a companion text file for each that is readable in
+%   Microsoft Excel.
+%
+%   QUICK_PSTH(file) exports a companion text file for each *.ArdyMotor
+%   file specified.  The variable "file" can either be a single string or a
+%   cell array of strings containing file names.
+%
+%   Last updated January 23, 2013, by Drew Sloan.
+%   Revised on February 8, 2016 by Sam Butensky.
+%Check to see if any companion *.txt files already exist for these files.
+for f = 1:length(files)                                                     %Step through each file.
+    data = ArdyMotorFileRead(files{f});                                     %Read in the data from the *.ArdyMotor file.
+    if ~isfield(data,'trial') || isempty(data.trial)                        %If there's no trials in this data file...
+        warning('ARDYMOTOR2TEXT:NoTrials',['WARNING FROM '...
+            'ARDYMOTOR2TEXT: The file "' files{f} '" has zero trials '...
+            'and will be skipped.']);                                       %Show a warning.
+        continue                                                            %Skip to the next file.
+    end
+    
+    if strcmpi(data.threshtype,'bidirectional')                             %If the threshold type is "bidirectional"...
+        data.threshtype = 'degrees (bidirectional)';                        %Change the threshold type to "degrees (bidirectional)".
+    end
+    
+    %Write the overall session results.
+    temp = mean([data.trial.outcome] == 'H');                               %Calculate the overall hit rate
+    
+    total_mean_distance = nan(1, length(data.trial));
+    total_latency_to_hit = nan(1, length(data.trial));
+    total_peak_velocity = nan(1, length(data.trial));
+    total_peak_acceleration = nan(1, length(data.trial));
+    total_num_turns = nan(1, length(data.trial));
+    total_mean_turn_distance = nan(1, length(data.trial));
+    total_threshold = nan(1, length(data.trial));
+    
+    days = 1:length(data.trial);
+    
+    for t = 1:length(data.trial)                                            %Step through each trial.
+        %         a = find((data.trial(t).sample_times >= 0 & ...
+        %             data.trial(t).sample_times < 1000*data.trial(t).hitwin));       %Find all samples within the hit window.
+        a = find((data.trial(t).sample_times < 1000*data.trial(t).hitwin));       %Find all samples within the hit window.
+        if strcmpi(data.threshtype,'degrees (bidirectional)')               %If the threshold type is bidirectional knob-turning...
+            signal = abs(data.trial(t).signal(a) - ....
+                data.trial(t).signal(1));                                   %Subtract the starting degrees value from the trial signal.
+        elseif strcmpi(data.threshtype,'# of spins')                        %If the threshold type is the number of spins...
+            temp = diff(data.trial(t).signal);                              %Find the velocity profile for this trial.
+            temp = boxsmooth(temp,10);                                      %Boxsmooth the wheel velocity with a 100 ms smooth.
+            [pks,i] = PeakFinder(temp,10);                                  %Find all peaks in the trial signal at least 100 ms apart.
+            i(pks < 1) = [];                                                %Kick out all peaks that are less than 1 degree/sample.
+            i = intersect(a,i+1)-1;                                         %Find all peaks that are in the hit window.
+            signal = length(i);                                             %Set the trial signal to the number of wheel spins.
+        elseif strcmpi(data.threshtype, 'degrees (total)')
+            signal = data.trial(t).signal(a);
+        else
+            signal = data.trial(t).signal(a) - data.trial(t).signal(1);    %Grab the raw signal for the trial.
+        end
+        
+        data.trial(t).range = range(signal);                                %Find the hit window range of each trial signal.
+        data.trial(t).max = max(signal);                                    %Find the hit window maximum of each trial signal.
+        data.trial(t).min = min(signal);                                    %Find the hit window minimum of each trial signal.
+        [pks, sig] = Knob_Peak_Finder(signal);
+        data.trial(t).num_turns = length(sig);                             %Calculate number of turns
+        if data.trial(t).num_turns == 0                                    %If a turn was initiated in the previous session, and not registered
+            data.trial(t).num_turns = 1;                                   %in this session, then count it as 1
+        end
+        smooth_trial_signal = boxsmooth(signal);
+        smooth_knob_velocity = boxsmooth(diff(smooth_trial_signal));                %Boxsmooth the velocity signal
+        data.trial(t).peak_velocity = max(smooth_knob_velocity);
+        
+        knob_acceleration = boxsmooth(diff(smooth_knob_velocity));
+        data.trial(t).peak_acceleration = max(knob_acceleration);
+        
+        if (data.trial(t).outcome == 72)                                   %If it was a hit
+            hit_time = find(data.trial(t).signal >= ...                    %Calculate the hit time
+                data.trial(t).thresh,1);
+            data.trial(t).latency_to_hit = hit_time;                       %hit time is then latency to hit
+        else
+            data.trial(t).latency_to_hit = NaN;                            %If trial resulted in a miss, then set latency to hit to NaN
+        end                
+        total_latency_to_hit(1,t) = data.trial(t).latency_to_hit;
+        total_peak_velocity(1,t) = data.trial(t).peak_velocity;        
+    end
+    Latency = ones(1,max(days))*nanmean(total_latency_to_hit);
+    PeakVelocity = ones(1,max(days))*nanmean(total_peak_velocity);
+ end
+
