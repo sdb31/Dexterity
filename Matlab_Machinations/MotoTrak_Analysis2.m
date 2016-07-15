@@ -238,15 +238,15 @@ for d = 1:length(devices)                                                   %Ste
         DevicesRuns(d) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', sprintf('Devices: %s', devices{d}), ...
             'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .58 .4 .05],...
             'Fontsize', 10, 'Fontweight', 'normal') ;
-        Timeline(i) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', 'Timeline', ...
-            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .48 .4 .05],...
-            'Fontsize', 10, 'Fontweight', 'bold') ;
+%         Timeline(i) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', 'Timeline', ...
+%             'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .48 .4 .05],...
+%             'Fontsize', 10, 'Fontweight', 'bold') ;
         General_Analysis(i) = uicontrol('Parent', tab(i),'style','pushbutton','string','General Analysis','HorizontalAlignment', 'left',...
-            'units','normalized','position',[.65 .75 .25 .15],'fontsize',10, 'callback', {@GeneralAnalysis,devices(d)},'userdata',plotdata(i));    
-        hold on;
-        ax = axes('Parent', tab(i), 'units','normalized','position',[.03 .3 .94 .1 ],'Visible', 'off'); 
-        line([0, 1], [1, 1], 'Parent', ax, 'linewidth', 2, 'color', 'k')
-        hold off;
+            'units','normalized','position',[.7 .8 .25 .15],'fontsize',10, 'callback', {@GeneralAnalysis,devices(d)},'userdata',plotdata(i));    
+%         hold on;
+%         ax = axes('Parent', tab(i), 'units','normalized','position',[.03 .3 .94 .1 ],'Visible', 'off'); 
+%         line([0, 1], [1, 1], 'Parent', ax, 'linewidth', 2, 'color', 'k')
+%         hold off;
     end
 end
 
@@ -294,8 +294,8 @@ for d = 1:length(devices)                                                   %Ste
         obj(i) = uicontrol(fig,'style','pushbutton','string',str{i-1},...
             'units','centimeters','position',pos,'fontsize',fontsize);      %Create pushbuttons for selecting the timescale.
     end
-    set(obj(1),'callback',{@Set_Plot_Type,obj});                            %Set the callback for the pop-up menu.
-    set(obj(2:4),'callback',{@Plot_Timeline,obj,[]});                       %Set the callback for the timescale buttons.
+    set(obj(1),'callback',{@Set_Plot_Type,obj,data});                            %Set the callback for the pop-up menu.
+    set(obj(2:4),'callback',{@Plot_Timeline,obj,[],data});                       %Set the callback for the timescale buttons.
     set(obj(5),'callback',{@Export_Data,ax,obj});                           %Set the callback for the export button.
     set(fig,'userdata',data);                                           %Save the plot data to the figure's 'UserData' property.
     Plot_Timeline(obj(2),[],obj,[],data);                                        %Call the function to plot the session data in the figure.
@@ -303,9 +303,9 @@ for d = 1:length(devices)                                                   %Ste
 end
 %% This function is called when the user selects a plot type in the pop-up menu.
 
-function Set_Plot_Type(~,~,obj)
+function Set_Plot_Type(~,~,obj,data)
 i = strcmpi(get(obj,'fontweight'),'bold');                                  %Find the pushbutton with the bold fontweight.
-Plot_Timeline(obj(i),[],obj,[]);                                            %Call the subfunction to plot the data by the appropriate timeline.
+Plot_Timeline(obj(i),[],obj,[],data);                                            %Call the subfunction to plot the data by the appropriate timeline.
 
 %% This subfunction sorts the data into single-session values and sends it to the plot function.
 function Plot_Timeline(hObject,~,obj,fid,data)
@@ -649,8 +649,8 @@ set(temp,'fontsize',1.1*fontsize);                                          %Set
 
 %% This function is called whenever a point is selected in General Analysis
 function TrialViewer(hObject,~,plotdata,i,TrialViewerData)
-files = TrialViewerData.files;
-for r = 1:length(files)                                                      %Step through each file.
-    files{r}(1:find(files{r} == '\' | files{r} == '/',1,'last')) = [];         %Kick out the path from the filename.    
-end
-MotoTrak_Supination_Viewer_Edit(files(i))
+Files = TrialViewerData.files;
+a = find(Files{i} == '\',1,'last');                                     %Find the last forward slash in the filename.
+files = Files{i}(a+1:end);                                               %Grab the filename minus the path.
+path = Files{i}(1:a);
+MotoTrak_Supination_Viewer_Edit(files,path)
