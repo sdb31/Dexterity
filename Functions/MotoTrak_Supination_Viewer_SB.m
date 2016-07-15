@@ -1,4 +1,4 @@
-function MotoTrak_Supination_Viewer
+function MotoTrak_Supination_Viewer_SB
 
 [files, path] = uigetfile('*.ArdyMotor','Select MotoTrak Files',...
     'multiselect','on');                                                    %Have the user pick an input *.ArdyMotor file or files.
@@ -234,4 +234,3 @@ function [pks, sig] = Knob_Peak_Finder(signal)
             j = j+1;
         end
     end
-
