@@ -1,4 +1,9 @@
-function MotoTrak_Supination_Viewer_Edit(files)
+function MotoTrak_Supination_Viewer_Edit(files,path)
+
+if ~iscell(files) && files(1) == 0                                          %If no file was selected...
+    return                                                                  %Exit the function.
+end
+cd(path);                                                                   %Change the current directory to the specified folder.
 if ischar(files)                                                            %If only one file was selected...
     files = {files};                                                        %Convert the string to a cell array.
 end
