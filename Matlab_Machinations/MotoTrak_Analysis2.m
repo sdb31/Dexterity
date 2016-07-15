@@ -10,8 +10,7 @@ else                                                                        %Oth
     else
         progpath = temp(1:find(temp == '\',1,'last'));                      %Pull the path out of the m-file name.
     end
-end
-   
+end 
 %% Have the user choose a path containing data files to analyze.
 datapath = 'C:\Users\sab3005\Desktop\KnobAnalysisProject';                                                  %Set the expected primary local data path for saving data files.
 if ~exist(datapath,'dir')                                                   %If the primary local data path doesn't exist...
@@ -211,7 +210,7 @@ for d = 1:length(devices)                                                   %Ste
         FinalDates{r} = dates{end};
     end
     pos = get(0,'Screensize');                                              %Grab the screensize.
-    h = 10;                                                                 %Set the height of the figure, in centimeters.
+    h = 5;                                                                 %Set the height of the figure, in centimeters.
     w = 15;                                                                 %Set the width of the figure, in centimeters.
     fig = figure('numbertitle','off','units','centimeters',...
         'name',['MotoTrak Analysis: ' devices{d}],'menubar','none',...
@@ -224,25 +223,27 @@ for d = 1:length(devices)                                                   %Ste
         laststages(i) = plotdata(i).stage(length(plotdata(i).stage));
         numberofsessions(i) = length(plotdata(i).stage);
         AnimalName(i) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', sprintf('Animal Name: %s', tabs{i}), ...
-            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .9 .4 .05],...
+            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .85 .4 .1],...
             'Fontsize', 10, 'Fontweight', 'normal') ;
         LastSessionRun(i) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', sprintf('Last Session Run: %s', laststages{i}), ...
-            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .82 .6 .05],...
+            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .65 .6 .1],...
             'Fontsize', 10, 'Fontweight', 'normal') ;
         LastDateRun(i) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', sprintf('Last Date Run: %s', FinalDates{i}), ...
-            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .74 .4 .05],...
+            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .45 .4 .1],...
             'Fontsize', 10, 'Fontweight', 'normal') ;
         NumberOfSessions(i) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', sprintf('Number of Sessions: %d', numberofsessions(i)), ...
-            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .66 .4 .05],...
+            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .25 .4 .1],...
             'Fontsize', 10, 'Fontweight', 'normal') ;
         DevicesRuns(d) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', sprintf('Devices: %s', devices{d}), ...
-            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .58 .4 .05],...
+            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .05 .4 .1],...
             'Fontsize', 10, 'Fontweight', 'normal') ;
 %         Timeline(i) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', 'Timeline', ...
 %             'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .48 .4 .05],...
 %             'Fontsize', 10, 'Fontweight', 'bold') ;
         General_Analysis(i) = uicontrol('Parent', tab(i),'style','pushbutton','string','General Analysis','HorizontalAlignment', 'left',...
-            'units','normalized','position',[.7 .8 .25 .15],'fontsize',10, 'callback', {@GeneralAnalysis,devices(d)},'userdata',plotdata(i));    
+            'units','normalized','position',[.7 .625 .25 .25],'fontsize',10, 'callback', {@GeneralAnalysis,devices(d)},'userdata',plotdata(i));    
+        Lab_Analysis(i) = uicontrol('Parent', tab(i),'style','pushbutton','string','Lab Analysis','HorizontalAlignment', 'left',...
+            'units','normalized','position',[.7 .125 .25 .25],'fontsize',10, 'callback', {@LabAnalysis,devices(d)},'userdata',plotdata(i));        
 %         hold on;
 %         ax = axes('Parent', tab(i), 'units','normalized','position',[.03 .3 .94 .1 ],'Visible', 'off'); 
 %         line([0, 1], [1, 1], 'Parent', ax, 'linewidth', 2, 'color', 'k')
@@ -250,6 +251,7 @@ for d = 1:length(devices)                                                   %Ste
     end
 end
 
+%% This function is called when the user selects the General Analysis Pushbutton
 function GeneralAnalysis(hObject,~,devices)
 data = hObject.UserData;
 pos = get(0,'Screensize');                                              %Grab the screensize.
@@ -301,8 +303,52 @@ for d = 1:length(devices)                                                   %Ste
     Plot_Timeline(obj(2),[],obj,[],data);                                        %Call the function to plot the session data in the figure.
     set(fig,'ResizeFcn',{@Resize,ax,obj});
 end
-%% This function is called when the user selects a plot type in the pop-up menu.
 
+%% This function is called when the user selects the Lab Analysis Pushbutton
+function LabAnalysis(hObject,~,devices)
+data = hObject.UserData;
+Table = readtable('LabSpecificAnalysisConfig.txt');
+Path = Table{:,2};
+pos = get(0,'Screensize');                                              %Grab the screensize.
+h = 8;                                                                 %Set the height of the figure, in centimeters.
+w = 15;                                                                 %Set the width of the figure, in centimeters.
+FileNames = {};
+for d = 1:length(devices)
+    fig = figure('numbertitle','off','units','centimeters',...
+        'name',['Lab Specific Analysis: ' devices{d}],'menubar','none',...
+        'position',[pos(3)/2-w/2, pos(4)/2-h/2, w, h]);
+    Choose_Lab = uicontrol('Parent', fig, 'Style', 'text', 'String', 'Please choose a lab:', ...
+        'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.1 .85 .3 .05],...
+        'Fontsize', 12, 'Fontweight', 'bold') ;
+    Analysis_Type = uicontrol('Parent', fig, 'Style', 'listbox', 'HorizontalAlignment', 'left',...
+        'callback', {@AnalysisType,devices},'userdata',data,'string',FileNames,...
+        'units', 'normalized', 'Position', [.525 .1 .45 .7]);
+    Lab_Name = uicontrol('Parent', fig, 'Style', 'listbox', 'HorizontalAlignment', 'left','string', Table{:,1},...
+        'units', 'normalized', 'Position', [.025 .1 .45 .7],'callback',{@LabName,devices,Path,Analysis_Type},'userdata',data,...
+        'Fontsize', 12);
+    Lab_Functions = uicontrol('Parent', fig, 'Style', 'text', 'String', 'Lab Functions', ...
+        'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.65 .85 .3 .05],...
+        'Fontsize', 12, 'Fontweight', 'bold') ;
+end
+
+function LabName(hObject,~,devices,Path,Analysis_Type)
+data = hObject.UserData;
+index_selected = get(hObject,'value');
+Path = Path{index_selected};
+cd(Path);
+Path = char(Path);
+list = dir(Path);
+FileNames = {list.name};
+FileNames = FileNames(3:end);
+set(Analysis_Type,'string',FileNames);
+% guidata(hObject,handles);
+% AnalysisType(hObject,[],devices,FileNames);
+
+function AnalysisType(hObject,~,devices)
+uiwait(msgbox('Hello!'));
+index_selected = get(hObject,'value');
+
+%% This function is called when the user selects a plot type in the pop-up menu.
 function Set_Plot_Type(~,~,obj,data)
 i = strcmpi(get(obj,'fontweight'),'bold');                                  %Find the pushbutton with the bold fontweight.
 Plot_Timeline(obj(i),[],obj,[],data);                                            %Call the subfunction to plot the data by the appropriate timeline.
@@ -649,8 +695,14 @@ set(temp,'fontsize',1.1*fontsize);                                          %Set
 
 %% This function is called whenever a point is selected in General Analysis
 function TrialViewer(hObject,~,plotdata,i,TrialViewerData)
-Files = TrialViewerData.files;
-a = find(Files{i} == '\',1,'last');                                     %Find the last forward slash in the filename.
-files = Files{i}(a+1:end);                                               %Grab the filename minus the path.
-path = Files{i}(1:a);
-MotoTrak_Supination_Viewer_Edit(files,path)
+choice = questdlg('Would you like to analyze this session?',...
+    'Analyze Data',...
+    'Yes', 'No', 'No');
+switch choice
+    case 'Yes'
+        Files = TrialViewerData.files;
+        a = find(Files{i} == '\',1,'last');                                     %Find the last forward slash in the filename.
+        files = Files{i}(a+1:end);                                               %Grab the filename minus the path.
+        path = Files{i}(1:a);
+        MotoTrak_Supination_Viewer_Edit(files,path)
+end
