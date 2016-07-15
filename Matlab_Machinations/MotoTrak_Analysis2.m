@@ -31,8 +31,10 @@ end
 
 %% Have the user select rats to include or exclude in the analysis.
 rats = files;                                                               %Copy the filenames to another cell array.
+% TrialViewerFiles = files;
 for r = 1:length(rats)                                                      %Step through each file.
     rats{r}(1:find(rats{r} == '\' | rats{r} == '/',1,'last')) = [];         %Kick out the path from the filename.
+%     TrialViewerFiles{r}(1:find(TrialViewerFiles{r} == '\' | TrialViewerFiles{r} == '/',1,'last')) = [];
     i = strfind(rats{r},'_20');                                             %Find the start of the timestamp.
     if isempty(i) || length(i) > 1                                          %If no timestamp was found in the filename, or multiple timestamps were found...
         rats{r} = [];                                                       %Set the rat name to empty brackets.
@@ -115,6 +117,7 @@ for f = 1:length(files)                                                     %Ste
             end
         end
         data(s).timestamp = data(s).starttime(1);                           %Grab the timestamp from the start of the first trial.
+        data(s).files = files{f};
     end
 end
 if ishandle(fig)                                                            %If the user hasn't closed the waitbar figure...
@@ -127,6 +130,8 @@ if isempty(data)                                                            %If 
 end
 [~,i] = sort([data.timestamp]);                                             %Find the indices to sort all files chronologically.
 data = data(i);                                                             %Sort all files chronologically.
+% files = files(i);
+% TrialViewerFiles = TrialViewerFiles(i);
 devices = unique({data.device});                                            %Grab the unique device names across all sessions.
 
 %% Create interactive figures for each of the device types.
@@ -152,12 +157,14 @@ for d = 1:length(devices)                                                   %Ste
         plotdata(r).min_iti = nan(1,length(i));                             %Pre-allocate a matrix to hold the minimum inter-trial interval.
         plotdata(r).impulse = nan(1,length(i));                             %Pre-allocate a matrix to hold the average peak impulse for each session.
         plotdata(r).stage = cell(1,length(i));                              %Pre-allocate a cell array to hold the stage name for each session..
+        plotdata(r).files = cell(1,length(i));
         for s = 1:length(i)                                                 %Step through each session.
             plotdata(r).peak(s) = mean(data(i(s)).peak);                    %Save the mean signal peak for each session.
             plotdata(r).impulse(s) = mean(data(i(s)).impulse);              %Save the mean signal impulse peak for each session.
             plotdata(r).hitrate(s) = mean(data(i(s)).outcome == 'H');       %Save the hit rate for each session.
             plotdata(r).numtrials(s) = length(data(i(s)).outcome);          %Save the total number of trials for each session.
             plotdata(r).stage{s} = data(i(s)).stage;                        %Save the stage for each session.
+            plotdata(r).files{s} = data(i(s)).files;
             times = data(i(s)).starttime;                                   %Grab the trial start times.
             times = 86400*(times - data(i(s)).timestamp);                   %Convert the trial start times to seconds relative to the first trial.
             if any(times >= 300)                                            %If the session lasted for at least 5 minutes...
@@ -242,16 +249,12 @@ for d = 1:length(devices)                                                   %Ste
         hold off;
     end
 end
-% tabNumber = find(tgroup.SelectedTab == tab);
-% set(General_Analysis, 'callback', @GeneralAnalysis);
-% set(fig,'userdata',plotdata);
 
 function GeneralAnalysis(hObject,~,devices)
 data = hObject.UserData;
 pos = get(0,'Screensize');                                              %Grab the screensize.
 h = 10;                                                                 %Set the height of the figure, in centimeters.
 w = 15;                                                                 %Set the width of the figure, in centimeters.
-[PeakVelocity,Latency] = DetailedStats(files);
 for d = 1:length(devices)                                                   %Step through the devices.
     fig = figure('numbertitle','off','units','centimeters',...
         'name',['MotoTrak Analysis: ' devices{d}],'menubar','none',...
@@ -295,17 +298,18 @@ for d = 1:length(devices)                                                   %Ste
     set(obj(2:4),'callback',{@Plot_Timeline,obj,[]});                       %Set the callback for the timescale buttons.
     set(obj(5),'callback',{@Export_Data,ax,obj});                           %Set the callback for the export button.
     set(fig,'userdata',data);                                           %Save the plot data to the figure's 'UserData' property.
-    Plot_Timeline(obj(2),[],obj,[]);                                        %Call the function to plot the session data in the figure.
+    Plot_Timeline(obj(2),[],obj,[],data);                                        %Call the function to plot the session data in the figure.
     set(fig,'ResizeFcn',{@Resize,ax,obj});
 end
 %% This function is called when the user selects a plot type in the pop-up menu.
+
 function Set_Plot_Type(~,~,obj)
 i = strcmpi(get(obj,'fontweight'),'bold');                                  %Find the pushbutton with the bold fontweight.
 Plot_Timeline(obj(i),[],obj,[]);                                            %Call the subfunction to plot the data by the appropriate timeline.
 
-
 %% This subfunction sorts the data into single-session values and sends it to the plot function.
-function Plot_Timeline(hObject,~,obj,fid)
+function Plot_Timeline(hObject,~,obj,fid,data)
+TrialViewerData = data;
 set(hObject,'fontweight','bold','foregroundcolor',[0 0.5 0]);               %Make this pushbutton's text bold.
 set(setdiff(obj(2:4),hObject),'fontweight','normal','foregroundcolor','k'); %Make the other pushbutton's text normal and black.
 fig = get(hObject,'parent');                                                %Grab the parent figure of the pushbutton.
@@ -382,7 +386,7 @@ end
 ax = get(fig,'children');                                                   %Grab all children of the figure.
 ax(~strcmpi(get(ax,'type'),'axes')) = [];                                   %Kick out all non-axes objects.
 if isempty(fid)                                                             %If no text file handle was passed to this function...
-    Make_Plot(plotdata,ax,str);                                             %Call the subfunction to make the plot.
+    Make_Plot(plotdata,ax,str,TrialViewerData);                                             %Call the subfunction to make the plot.
 else                                                                        %Otherwise...
     t = vertcat(plotdata.x);                                                %Vertically concatenate all time-points.
     t = unique(t,'rows');                                                   %Find all unique rows of the timepoints.
@@ -419,7 +423,6 @@ else                                                                        %Oth
         end
     end
 end
-
 
 %% This subfunction sorts the data into daily values and sends it to the plot function.
 function Export_Data(hObject,~,ax,obj)
@@ -484,9 +487,8 @@ if any(strcmpi({'spreadsheet','both'},output))                              %If 
     winopen([path file]);                                                   %Open the CSV file.
 end
 
-
 %% This section plots session/daily/weekly data in the specified axes.
-function Make_Plot(plotdata,ax,str)
+function Make_Plot(plotdata,ax,str,TrialViewerData)
 fig = get(ax,'parent');                                                     %Grab the figure handle for the axes' parent.
 set(fig,'units','centimeters');                                             %Set the figure's units to centimeters.
 temp = get(fig,'position');                                                 %Grab the figure position.
@@ -505,7 +507,7 @@ for r = 1:length(plotdata)                                                  %Ste
             'markeredgecolor',colors(r,:),'linestyle','none',...
             'markerfacecolor',colors(r,:),'marker','.',...
             'linewidth',linewidth,'markersize',markersize,'userdata',2,...
-            'parent',ax);                                                   %Mark each session with a unique marker.        
+            'parent',ax, 'ButtonDownFcn', {@TrialViewer,plotdata(r),i,TrialViewerData});                                                   %Mark each session with a unique marker.        
         hoverdata(end+1).xy = [mean(plotdata(r).x(i,:)),plotdata(r).y(i)];  %Save the x- and y-coordinates.
         if rem(plotdata(r).x(i,1),1) ~= 0                                   %If the timestamp is a fractional number of days...
             temp = datestr(plotdata(r).x(i,1),'mm/dd/yyyy, HH:MM');         %Show the date and the time.
@@ -554,7 +556,7 @@ txt = text(x(1),y(1),' ','fontsize',fontsize,'margin',2,...
     'verticalalignment','bottom','horizontalalignment','center',...
     'userdata',4);                                                          %Create a text object for labeling points.
 set(fig,'WindowButtonMotionFcn',{@MouseHover,ax,hoverdata,txt});            %Set the mouse hover function for the figure.
-
+% set(fig,'ButtonDownFcn', {@TrialViewer,ax,hoverdata,txt});
 
 %% This function executes while the mouse hovers over the axes of an interactive figure.
 function MouseHover(~,~,ax,data,txt)
@@ -609,7 +611,6 @@ if xy(1) >= a(1) && xy(1) <= a(2) && xy(2) >= a(3) && xy(2) <= a(4)         %If 
     end
 end
 
-
 %% This function is called whenever the main figure is resized.
 function Resize(hObject,~,ax,obj)
 set(hObject,'units','centimeters');                                         %Set the figure units to centimeters
@@ -646,124 +647,10 @@ set(ax,'fontsize',fontsize,'linewidth',linewidth);                          %Set
 temp = get(ax,'ylabel');                                                    %Grab the y-axis label handle for the axes.
 set(temp,'fontsize',1.1*fontsize);                                          %Set the font size for y-axis label.
 
-%% Knob Peak Finder
-function [pks, sig] = Knob_Peak_Finder(signal)
-%This code finds and kicks out peaks that have a std dev between
-%them less than 1
-
-smoothed_signal = boxsmooth(signal);                                        %smooth out the trial signal
-[pks, sig] = findpeaks(smoothed_signal, 'MINPEAKHEIGHT', 5, ...
-    'MINPEAKDISTANCE', 10);                                            %Find local maximma
-n = length(pks);
-j = 1;
-if n>1
-    while j <= n-1
-        if (abs(pks(j)-pks(j+1)) <= 5)                                 % if the diff between 2 peaks is less than or equal to 5
-            start_sig = sig(j);
-            end_sig = sig(j+1);
-            
-            signal_interest = smoothed_signal(start_sig:end_sig);
-            deviation_signal = std(signal_interest);
-            
-            if deviation_signal < 1
-                pks(j+1) = [];
-                sig(j+1) = [];
-                j = j-1;
-            end
-            
-        end
-        n = length(pks);
-        j = j+1;
-    end
+%% This function is called whenever a point is selected in General Analysis
+function TrialViewer(hObject,~,plotdata,i,TrialViewerData)
+files = TrialViewerData.files;
+for r = 1:length(files)                                                      %Step through each file.
+    files{r}(1:find(files{r} == '\' | files{r} == '/',1,'last')) = [];         %Kick out the path from the filename.    
 end
-
-%% Detailed Stats
-function [PeakVelocity,Latency] = DetailedStats(files)
-%ARDYMOTOR2TEXT.m - Rennaker Neural Engineering Lab, 2013
-%
-%   ARDYMOTOR2TEXT has the user select one or multiple *.ArdyMotor files
-%   and then exports a companion text file for each that is readable in
-%   Microsoft Excel.
-%
-%   QUICK_PSTH(file) exports a companion text file for each *.ArdyMotor
-%   file specified.  The variable "file" can either be a single string or a
-%   cell array of strings containing file names.
-%
-%   Last updated January 23, 2013, by Drew Sloan.
-%   Revised on February 8, 2016 by Sam Butensky.
-%Check to see if any companion *.txt files already exist for these files.
-for f = 1:length(files)                                                     %Step through each file.
-    data = ArdyMotorFileRead(files{f});                                     %Read in the data from the *.ArdyMotor file.
-    if ~isfield(data,'trial') || isempty(data.trial)                        %If there's no trials in this data file...
-        warning('ARDYMOTOR2TEXT:NoTrials',['WARNING FROM '...
-            'ARDYMOTOR2TEXT: The file "' files{f} '" has zero trials '...
-            'and will be skipped.']);                                       %Show a warning.
-        continue                                                            %Skip to the next file.
-    end
-    
-    if strcmpi(data.threshtype,'bidirectional')                             %If the threshold type is "bidirectional"...
-        data.threshtype = 'degrees (bidirectional)';                        %Change the threshold type to "degrees (bidirectional)".
-    end
-    
-    %Write the overall session results.
-    temp = mean([data.trial.outcome] == 'H');                               %Calculate the overall hit rate
-    
-    total_mean_distance = nan(1, length(data.trial));
-    total_latency_to_hit = nan(1, length(data.trial));
-    total_peak_velocity = nan(1, length(data.trial));
-    total_peak_acceleration = nan(1, length(data.trial));
-    total_num_turns = nan(1, length(data.trial));
-    total_mean_turn_distance = nan(1, length(data.trial));
-    total_threshold = nan(1, length(data.trial));
-    
-    days = 1:length(data.trial);
-    
-    for t = 1:length(data.trial)                                            %Step through each trial.
-        %         a = find((data.trial(t).sample_times >= 0 & ...
-        %             data.trial(t).sample_times < 1000*data.trial(t).hitwin));       %Find all samples within the hit window.
-        a = find((data.trial(t).sample_times < 1000*data.trial(t).hitwin));       %Find all samples within the hit window.
-        if strcmpi(data.threshtype,'degrees (bidirectional)')               %If the threshold type is bidirectional knob-turning...
-            signal = abs(data.trial(t).signal(a) - ....
-                data.trial(t).signal(1));                                   %Subtract the starting degrees value from the trial signal.
-        elseif strcmpi(data.threshtype,'# of spins')                        %If the threshold type is the number of spins...
-            temp = diff(data.trial(t).signal);                              %Find the velocity profile for this trial.
-            temp = boxsmooth(temp,10);                                      %Boxsmooth the wheel velocity with a 100 ms smooth.
-            [pks,i] = PeakFinder(temp,10);                                  %Find all peaks in the trial signal at least 100 ms apart.
-            i(pks < 1) = [];                                                %Kick out all peaks that are less than 1 degree/sample.
-            i = intersect(a,i+1)-1;                                         %Find all peaks that are in the hit window.
-            signal = length(i);                                             %Set the trial signal to the number of wheel spins.
-        elseif strcmpi(data.threshtype, 'degrees (total)')
-            signal = data.trial(t).signal(a);
-        else
-            signal = data.trial(t).signal(a) - data.trial(t).signal(1);    %Grab the raw signal for the trial.
-        end
-        
-        data.trial(t).range = range(signal);                                %Find the hit window range of each trial signal.
-        data.trial(t).max = max(signal);                                    %Find the hit window maximum of each trial signal.
-        data.trial(t).min = min(signal);                                    %Find the hit window minimum of each trial signal.
-        [pks, sig] = Knob_Peak_Finder(signal);
-        data.trial(t).num_turns = length(sig);                             %Calculate number of turns
-        if data.trial(t).num_turns == 0                                    %If a turn was initiated in the previous session, and not registered
-            data.trial(t).num_turns = 1;                                   %in this session, then count it as 1
-        end
-        smooth_trial_signal = boxsmooth(signal);
-        smooth_knob_velocity = boxsmooth(diff(smooth_trial_signal));                %Boxsmooth the velocity signal
-        data.trial(t).peak_velocity = max(smooth_knob_velocity);
-        
-        knob_acceleration = boxsmooth(diff(smooth_knob_velocity));
-        data.trial(t).peak_acceleration = max(knob_acceleration);
-        
-        if (data.trial(t).outcome == 72)                                   %If it was a hit
-            hit_time = find(data.trial(t).signal >= ...                    %Calculate the hit time
-                data.trial(t).thresh,1);
-            data.trial(t).latency_to_hit = hit_time;                       %hit time is then latency to hit
-        else
-            data.trial(t).latency_to_hit = NaN;                            %If trial resulted in a miss, then set latency to hit to NaN
-        end                
-        total_latency_to_hit(1,t) = data.trial(t).latency_to_hit;
-        total_peak_velocity(1,t) = data.trial(t).peak_velocity;        
-    end
-    Latency = ones(1,max(days))*nanmean(total_latency_to_hit);
-    PeakVelocity = ones(1,max(days))*nanmean(total_peak_velocity);
- end
-
+MotoTrak_Supination_Viewer_Edit(files(i))
