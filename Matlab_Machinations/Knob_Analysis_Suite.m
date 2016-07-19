@@ -33,12 +33,6 @@ end
 
 function AnalyzeGroupData(hObject,~)
 handles = guidata(hObject);
-figure; plot(linspace(1,100),sin(linspace(1,100)));
+AnalyzeGroup
 guidata(handles.fig,handles);
-end
-
-function SetDatapath(hObject,~)
-handles = guidata(hObject);
-[files, path] = uigetfile('*.ArdyMotor','Select MotoTrak Files',...
-    'multiselect','off');
 end
