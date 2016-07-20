@@ -17,7 +17,7 @@ switch choice
         ExperimentInfo = inputdlg(prompt,dlg_title,[1 50; 1 50]);
         Groups = strsplit(ExperimentInfo{2});
         mkdir(ExperimentInfo{1});
-        temp = [handles.datapath ExperimentInfo{1}]
+        temp = [handles.datapath ExperimentInfo{1}];
         cd(temp);
         for i = 1:length(Groups);
             mkdir(temp, Groups{i});
@@ -36,8 +36,10 @@ switch choice
         
         %% Have the user select rats to include or exclude in the analysis.
         rats = files;
+        rats2 = files;
         for r = 1:length(rats)                                                      %Step through each file.
             rats{r}(1:find(rats{r} == '\' | rats{r} == '/',1,'last')) = [];         %Kick out the path from the filename.
+            rats2{r}(1:find(rats2{r} == '\' | rats2{r} == '/',1,'last')) = [];         %Kick out the path from the filename.
             i = strfind(rats{r},'_20');                                             %Find the start of the timestamp.
             if isempty(i) || length(i) > 1                                          %If no timestamp was found in the filename, or multiple timestamps were found...
                 rats{r} = [];                                                       %Set the rat name to empty brackets.
@@ -120,6 +122,7 @@ switch choice
                 end
                 data(s).timestamp = data(s).starttime(1);                           %Grab the timestamp from the start of the first trial.
                 data(s).files = files{f};
+                data(s).filenames = rats2{f};
             end
         end
         if ishandle(fig)                                                            %If the user hasn't closed the waitbar figure...
@@ -158,6 +161,7 @@ switch choice
                 plotdata(r).impulse = nan(1,length(i));                             %Pre-allocate a matrix to hold the average peak impulse for each session.
                 plotdata(r).stage = cell(1,length(i));                              %Pre-allocate a cell array to hold the stage name for each session..
                 plotdata(r).files = cell(1,length(i));
+                plotdata(r).filenames = cell(1,length(i));
                 for s = 1:length(i)                                                 %Step through each session.
                     plotdata(r).peak(s) = mean(data(i(s)).peak);                    %Save the mean signal peak for each session.
                     plotdata(r).impulse(s) = mean(data(i(s)).impulse);              %Save the mean signal impulse peak for each session.
@@ -165,6 +169,7 @@ switch choice
                     plotdata(r).numtrials(s) = length(data(i(s)).outcome);          %Save the total number of trials for each session.
                     plotdata(r).stage{s} = data(i(s)).stage;                        %Save the stage for each session.
                     plotdata(r).files{s} = data(i(s)).files;
+                    plotdata(r).filenames{s} = data(i(s)).filenames;
                     times = data(i(s)).starttime;                                   %Grab the trial start times.
                     times = 86400*(times - data(i(s)).timestamp);                   %Convert the trial start times to seconds relative to the first trial.
                     if any(times >= 300)                                            %If the session lasted for at least 5 minutes...
@@ -196,24 +201,58 @@ switch choice
             end
         end
         uiwait(msgbox('Great! Please assign subjects to each experimental group now.'));        
-        pos = get(0,'Screensize');
-        h = 10;
-        w = 10;
-        fig = figure('numbertitle', 'off', 'units', 'centimeters',...
-            'name', 'Assign Subjects to Group', 'menubar', 'none',...
-            'position', [pos(3)/2-w/2, pos(4)/2-h/2, w, h]);
-        for r = 1:length(rat_list);
-            Subject(r) = uicontrol('Parent', fig, 'Style', 'text', 'String', ['Subject ' rat_list{r}], ...
-                'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.1, 1-r*.1, .3, .05],...
-                'Fontsize', 12, 'Fontweight', 'bold') ;
-            ExperimentalGroup(r) = uicontrol(fig,'style','popup','string',Groups,...
-                'units','normalized','position',[.4, 1-r*.1, .3, .05],'fontsize',12);
+        Counter = 1;
+        for g = 1:length(Groups);
+            GG = listdlg('PromptString',['Group ' Groups{g} ' rats'],...
+                'name','Subject Assignment',...
+                'SelectionMode','multiple',...
+                'listsize',[250 250],...
+                'initialvalue',1:length(rat_list),...
+                'uh',25,...
+                'ListString',rat_list);
+            %             pos = get(0,'Screensize');
+            %             h = 10;
+            %             w = 8;
+            %             fig = figure('numbertitle', 'off', 'units', 'centimeters',...
+            %                 'name', ['Assign Subjects to ' Groups{g}], 'menubar', 'none',...
+            %                 'position', [pos(3)/2-w/2, pos(4)/2-h/2, w, h]);
+            %             for r = 1:length(rat_list);
+            %                 Subject(r) = uicontrol('Parent', fig, 'Style', 'text', 'String', ['Subject ' rat_list{r}], ...
+            %                     'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.2, 1-r*.072, .3, .05],...
+            %                     'Fontsize', 10, 'Fontweight', 'bold') ;
+            %                 Experimental_Group(r) = uicontrol(fig,'style','popup','string',Groups,'HorizontalAlignment', 'left',...
+            %                     'units','normalized','position',[.5, 1-r*.07, .3, .05],'fontsize',10,'callback', {@ExperimentalGroup,r});
+            %             end
+            %             Done = uicontrol('Parent', fig', 'Style', 'pushbutton', 'String', 'Done','callback', {@All_Finished},...
+            %                 'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.4, 1-(r+3)*.07, .2, .1]);
+            if isempty(g)                                                               %If the user clicked "cancel" or closed the dialog...
+                return                                                                  %Skip execution of the rest of the function.
+            else                                                                        %Otherwise...
+                handles(g).path = ['C:\AnalyzeGroup\' ExperimentInfo{1} '\' Groups{g}];
+                handles(g).rat_list = rat_list(GG);                                                 %Pare down the rat list to those that the user selected.
+%                 for r = 1:length(GG);
+%                     SubjectNames{Counter} = [handles(g).rat_list{r} ' (' Groups{g} ')'];
+%                     Counter = Counter + 1;
+%                 end
+            end
+            
+            for r = 1:length(handles(g).rat_list)
+                cd(handles(g).path)
+                mkdir(handles(g).rat_list{r});
+                temp = [handles(g).path '\' handles(g).rat_list{r} '\'];
+                cd(temp)              
+                temp2 = [datapath '\' handles(g).rat_list{r}];
+                copyfile(temp2,temp);
+%                 Counter = Counter + 1;
+            end
+            
         end
     case 'Existing Experiment'
         uiwait(msgbox('Existing Experiment'));
 end
 
-    
+path = 'C:\AnalyzeGroup';    
+
 pos = get(0,'Screensize');                                              %Grab the screensize.
 h = 10;                                                                 %Set the height of the figure, in centimeters.
 w = 20;                                                                 %Set the width of the figure, in centimeters.
@@ -224,10 +263,10 @@ fig = figure('numbertitle','off','units','centimeters',...
 % ExperimentNames = Table{:,1};
 % SubjectNames = Table{:,2};
 ExperimentNames = {'Test'};
-SubjectNames = {};
+% SubjectNames = {};
 
 Subjects = uicontrol('Parent', fig, 'Style', 'listbox', 'HorizontalAlignment', 'left','min', 0,'max',25,...
-    'string','Subjects', 'units', 'normalized', 'Position', [.0475 .05 .27 .7], 'Fontsize', 11);
+    'string','Test', 'units', 'normalized', 'Position', [.0475 .05 .27 .7], 'Fontsize', 11);
 Subjects_Text = uicontrol('Parent', fig, 'Style', 'text', 'String', 'Subjects:', ...
     'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.0475 .77 .3 .05],...
     'Fontsize', 12, 'Fontweight', 'bold') ;
@@ -273,3 +312,8 @@ else
     SubjectNames = strsplit(SubjectNames);
     set(Subjects,'string',SubjectNames);
 end
+
+function ExperimentalGroup(hObject,~,r)
+index_selected = get(hObject,'value');
+uiwait(msgbox('Hello'));
+
