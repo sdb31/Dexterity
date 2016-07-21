@@ -1,33 +1,38 @@
 function AnalyzeGroup(varargin)
-handles.datapath = 'C:\AnalyzeGroup\';                                         %Set the primary local data path for saving data files.
-if ~exist(handles.datapath,'dir')                                           %If the primary local data path doesn't already exist...
-    mkdir(handles.datapath);                                                %Make the primary local data path.
+datapath = 'C:\AnalyzeGroup\';                                         %Set the primary local data path for saving data files.
+if ~exist(datapath,'dir')                                           %If the primary local data path doesn't already exist...
+    mkdir(datapath);                                                %Make the primary local data path.
 end
 
-cd(handles.datapath);
-Info = dir(handles.datapath);
+cd(datapath);
+Info = dir(datapath);
 choice = questdlg('Would you like to create a new experiment or choose from an existing one?',...
     'Choose or Create Experiment',...
     'New Experiment', 'Existing Experiment', 'Cancel');
 
 switch choice
     case 'New Experiment'
-        prompt = {'Experiment Name', 'Group Names'};
+        prompt = {'Experiment Name', 'Group Names', 'Event Data', 'Total Weeks'};
         dlg_title = 'Create New Experiment';
-        ExperimentInfo = inputdlg(prompt,dlg_title,[1 50; 1 50]);
+        ExperimentInfo = inputdlg(prompt,dlg_title,[1 50; 1 50; 1 50; 1 20]);
         Groups = strsplit(ExperimentInfo{2});
+        Events = strsplit(ExperimentInfo{3});
+        Weeks = str2num(ExperimentInfo{4});
+        %         Sessions = str2double(strsplit(ExperimentInfo{5}));
         mkdir(ExperimentInfo{1});
-        temp = [handles.datapath ExperimentInfo{1}];
+        temp = [datapath ExperimentInfo{1}];
         cd(temp);
+        mkdir('TreatmentGroups');
+        temp = [temp '\TreatmentGroups'];
         for i = 1:length(Groups);
             mkdir(temp, Groups{i});
         end
-        datapath = uigetdir(handles.datapath,'Where is your experiment data located?');       %Ask the user where their data is located.
+        
+        %% Find all of the MotoTrak data files in the data path.
+        datapath = uigetdir(datapath,'Where is your experiment data located?');       %Ask the user where their data is located.
         if datapath(1) == 0                                                         %If the user pressed "cancel"...
             return                                                                  %Skip execution of the rest of the function.
         end
-        
-        %% Find all of the MotoTrak data files in the data path.
         files = file_miner(datapath,'*.ArdyMotor');                                 %Find all LPS *.ArdyMotor files in the LPS folders.
         pause(0.01);                                                                %Pause for 10 milliseconds.
         if isempty(files)                                                           %If no files were found...
@@ -200,36 +205,22 @@ switch choice
                 end
             end
         end
-        uiwait(msgbox('Great! Please assign subjects to each experimental group now.'));        
+        uiwait(msgbox('Great! Please assign subjects to each experimental group now.', 'Proceed to Subject Assignment'));        
         Counter = 1;
         for g = 1:length(Groups);
-            GG = listdlg('PromptString',['Group ' Groups{g} ' rats'],...
+            GG = listdlg('PromptString',['Group: ' Groups{g}],...
                 'name','Subject Assignment',...
                 'SelectionMode','multiple',...
                 'listsize',[250 250],...
                 'initialvalue',1:length(rat_list),...
                 'uh',25,...
                 'ListString',rat_list);
-            %             pos = get(0,'Screensize');
-            %             h = 10;
-            %             w = 8;
-            %             fig = figure('numbertitle', 'off', 'units', 'centimeters',...
-            %                 'name', ['Assign Subjects to ' Groups{g}], 'menubar', 'none',...
-            %                 'position', [pos(3)/2-w/2, pos(4)/2-h/2, w, h]);
-            %             for r = 1:length(rat_list);
-            %                 Subject(r) = uicontrol('Parent', fig, 'Style', 'text', 'String', ['Subject ' rat_list{r}], ...
-            %                     'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.2, 1-r*.072, .3, .05],...
-            %                     'Fontsize', 10, 'Fontweight', 'bold') ;
-            %                 Experimental_Group(r) = uicontrol(fig,'style','popup','string',Groups,'HorizontalAlignment', 'left',...
-            %                     'units','normalized','position',[.5, 1-r*.07, .3, .05],'fontsize',10,'callback', {@ExperimentalGroup,r});
-            %             end
-            %             Done = uicontrol('Parent', fig', 'Style', 'pushbutton', 'String', 'Done','callback', {@All_Finished},...
-            %                 'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.4, 1-(r+3)*.07, .2, .1]);
             if isempty(g)                                                               %If the user clicked "cancel" or closed the dialog...
                 return                                                                  %Skip execution of the rest of the function.
             else                                                                        %Otherwise...
-                handles(g).path = ['C:\AnalyzeGroup\' ExperimentInfo{1} '\' Groups{g}];
+                handles(g).path = ['C:\AnalyzeGroup\' ExperimentInfo{1} '\TreatmentGroups\' Groups{g}];
                 handles(g).rat_list = rat_list(GG);                                                 %Pare down the rat list to those that the user selected.
+                handles(g).GroupName = Groups{g};
 %                 for r = 1:length(GG);
 %                     SubjectNames{Counter} = [handles(g).rat_list{r} ' (' Groups{g} ')'];
 %                     Counter = Counter + 1;
@@ -243,15 +234,53 @@ switch choice
                 cd(temp)              
                 temp2 = [datapath '\' handles(g).rat_list{r}];
                 copyfile(temp2,temp);
-%                 Counter = Counter + 1;
+                temp3 = ['Number of sessions per week over ' num2str(Weeks) ' weeks for Animal ' handles(g).rat_list{r}];
+                dlg_title = 'Session per Week';
+                SessionsInfo(Counter) = inputdlg(temp3, dlg_title, [1 50]);
+                Counter = Counter + 1;
             end
-            
         end
-    case 'Existing Experiment'
-        uiwait(msgbox('Existing Experiment'));
+        FilePath = ['C:\AnalyzeGroup\' ExperimentInfo{1}];
+        cd(FilePath);
+        mkdir('ConfigFiles');
+        FilePath = [FilePath '\ConfigFiles'];
+        cd(FilePath);
+        filename = [ExperimentInfo{1} 'Config.xlsx'];
+        fid = fopen(filename, 'wt');
+        fprintf(fid,'%s\t', 'Weeks:'); fprintf(fid,'%d\n', Weeks);
+        fprintf(fid,'%s\t', 'Events:'); fprintf(fid,'%s\n\n', ExperimentInfo{3});
+        fprintf(fid,'%s\t', 'AnimalName'); fprintf(fid,'%s\n', 'SessionsperWeek');
+        for m = 1:length(rat_list);
+            fprintf(fid,'%s\t %s\n', rat_list{m}, SessionsInfo{m});
+        end
+        fclose(fid);
 end
 
 path = 'C:\AnalyzeGroup';    
+cd(path);
+Info = dir(path);
+ExperimentNames = {Info.name};
+ExperimentNames = ExperimentNames(3:end);
+for i = 1:length(ExperimentNames);
+   Counter = 1;
+   testpath = {};
+   testpath = ['C:\AnalyzeGroup\' ExperimentNames{i} '\TreatmentGroups'] ;
+   Info_Groups = dir(testpath);
+   GroupNames = {Info_Groups.name};
+   GroupNames = GroupNames(3:end);
+   GUI_GroupNames{i} = GroupNames;
+   for k = 1:length(GroupNames)
+       subjectpath = {};
+       subjectpath = [testpath '\' GroupNames{k}];
+       Info_Subjects = dir(subjectpath);
+       SubjectNames = {Info_Subjects.name};
+       handles(k).SubjectNames = SubjectNames(3:end);
+       for t = 1:length(handles(k).SubjectNames);
+          GUI_Subjects{i,Counter} = [handles(k).SubjectNames{t} ' (' GroupNames{k} ')']; 
+          Counter = Counter + 1;
+       end
+   end
+end
 
 pos = get(0,'Screensize');                                              %Grab the screensize.
 h = 10;                                                                 %Set the height of the figure, in centimeters.
@@ -262,11 +291,11 @@ fig = figure('numbertitle','off','units','centimeters',...
 % Table = readtable('TestFile2.txt');
 % ExperimentNames = Table{:,1};
 % SubjectNames = Table{:,2};
-ExperimentNames = {'Test'};
+% ExperimentNames = {'Test'};
 % SubjectNames = {};
 
 Subjects = uicontrol('Parent', fig, 'Style', 'listbox', 'HorizontalAlignment', 'left','min', 0,'max',25,...
-    'string','Test', 'units', 'normalized', 'Position', [.0475 .05 .27 .7], 'Fontsize', 11);
+    'string','Subjects', 'units', 'normalized', 'Position', [.0475 .05 .27 .7], 'Fontsize', 11);
 Subjects_Text = uicontrol('Parent', fig, 'Style', 'text', 'String', 'Subjects:', ...
     'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.0475 .77 .3 .05],...
     'Fontsize', 12, 'Fontweight', 'bold') ;
@@ -276,44 +305,30 @@ Groups_Text = uicontrol('Parent', fig, 'Style', 'text', 'String', 'Groups:', ...
     'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.365 .77 .3 .05],...
     'Fontsize', 12, 'Fontweight', 'bold') ;
 Experiment = uicontrol(fig,'style','popup','string',ExperimentNames,...
-        'units','normalized','position',[.15 .91 .25 .05],'fontsize',12,...
-        'callback',{@ExperimentCallback,SubjectNames,Subjects,Groups});
+        'units','normalized','position',[.15 .91 .25 .05],'fontsize',12);
 Experiment_Text = uicontrol('Parent', fig, 'Style', 'text', 'String', 'Experiment:', ...
     'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.01 .9 .13 .05],...
     'Fontsize', 12, 'Fontweight', 'bold') ;
 Events = uicontrol('Parent', fig, 'Style', 'listbox', 'HorizontalAlignment', 'left',...
-    'string','Events', 'units', 'normalized', 'Position', [.6825 .05 .27 .7], 'Fontsize', 11);
+    'string','Events', 'units', 'normalized', 'Position', [.6825 .05 .27 .7],'Fontsize', 11);
 Events_Text = uicontrol('Parent', fig, 'Style', 'text', 'String', 'Events:', ...
     'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.6825 .77 .3 .05],...
     'Fontsize', 12, 'Fontweight', 'bold') ;
 Make_Plot = uicontrol('Parent', fig, 'Style', 'pushbutton', 'HorizontalAlignment', 'left',...
     'string','Plot', 'units', 'normalized', 'Position', [.82 .86 .15 .1], 'Fontsize', 12);
+set(Experiment,'callback', {@ExperimentCallback,GUI_Subjects,GUI_GroupNames,ExperimentNames,Subjects,Groups,Events});
 
-function ExperimentCallback(hObject,~,SubjectNames,Subjects,Groups)
-Table = readtable('TestFile.txt');
+
+function ExperimentCallback(hObject,~,GUI_Subjects,GUI_GroupNames,ExperimentNames,Subjects,Groups,Events)
 index_selected = get(hObject,'value');
-if index_selected == length(hObject.String);
-%     uiwait(msgbox('Hello'));
-    prompt = {'Experiment Name', 'Subject Names', 'Groups'};
-    dlg_title = 'Create New Experiment';
-    answer = inputdlg(prompt,dlg_title,[1 50; 1 50; 1 50]);
-    hObject.String(length(hObject.String)) = answer(1,:);
-    hObject.String(length(hObject.String)+1) = {'Create New Experiment'};    
-    SubjectNames = strsplit(answer{2,:});
-    GroupNames = strsplit(answer{3,:});
-    set(Subjects,'string',SubjectNames);
-    set(Groups,'string',GroupNames);
-    Table{end,1} = answer(1,:); Table{end,2} = answer(2,:);
-    Table{size(Table,1)+1,1} = {'Create New Experiment'};
-    Table{size(Table,1)+1,2} = {''};
-%     save('TestFile.txt', Table)
-else
-    SubjectNames = SubjectNames{index_selected,:};
-    SubjectNames = strsplit(SubjectNames);
-    set(Subjects,'string',SubjectNames);
-end
-
-function ExperimentalGroup(hObject,~,r)
-index_selected = get(hObject,'value');
-uiwait(msgbox('Hello'));
-
+SelectedExperiment = ExperimentNames{index_selected};
+temp = ['C:\AnalyzeGroup\' SelectedExperiment '\ConfigFiles'];
+cd(temp);
+temp = [SelectedExperiment 'Config.txt'];
+T = readtable(temp);
+EventNames = T{:,3}; EventNames = strsplit(EventNames{:});
+SubjectNames = GUI_Subjects(index_selected,:);
+GroupNames = GUI_GroupNames{index_selected};
+set(Subjects,'string',SubjectNames);
+set(Groups,'string',GroupNames);
+set(Events,'string',EventNames);
