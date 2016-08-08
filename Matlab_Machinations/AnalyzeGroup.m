@@ -108,8 +108,8 @@ switch choice
                 warning(['ERROR READING: ' files{f}]);                              %Show which file had a read problem...
                 warning(err.message);                                               %Show the actual error message.
             end
-            if isfield(temp,'trial') && length(temp.trial) >= 5 && ...
-                    any(strcmpi(rat_list,temp.rat))                                 %If there were at least 5 trials...
+            if isfield(temp,'trial') && length(temp.trial) >= 5 %&& ...
+                    %any(strcmpi(rat_list,temp.rat))                                 %If there were at least 5 trials...
                 s = length(data) + 1;                                               %Create a new field index.
                 for field = {'rat','device','stage'}                               %Step through the fields we want to save from the data file...
                     data(s).(field{1}) = temp.(field{1});                           %Grab each field from the data file and save it.
@@ -128,7 +128,7 @@ switch choice
                 end
                 data(s).timestamp = data(s).starttime(1);                           %Grab the timestamp from the start of the first trial.
                 data(s).files = files{f};
-                data(s).filenames = rats2{f};
+                data(s).filenames = files{f}(a+1:end);
             end
         end
         if ishandle(fig)                                                            %If the user hasn't closed the waitbar figure...
@@ -215,8 +215,7 @@ switch choice
                 'listsize',[250 250],...
                 'initialvalue',1:length(rat_list),...
                 'uh',25,...
-                'ListString',rat_list,...
-                'ButtonDownFcn', {@SelectGroups});
+                'ListString',rat_list);               
             if isempty(g)                                                               %If the user clicked "cancel" or closed the dialog...
                 return                                                                  %Skip execution of the rest of the function.
             else                                                                        %Otherwise...
@@ -317,9 +316,9 @@ set(Experiment,'callback', {@ExperimentCallback,GUI_Subjects,GUI_GroupNames,Expe
 set(Plot, 'callback', {@PlotButton,Experiment,ExperimentNames});
 end
 
-% function PlotButton(hObject,~,Experiment,ExperimentNames);
-function SelectGroups(hObject,~)
-uiwait(msgbox('Hello'));
+% % function PlotButton(hObject,~,Experiment,ExperimentNames);
+% function SelectGroups(hObject,~)
+% uiwait(msgbox('Hello'));
 
 
 
@@ -352,17 +351,17 @@ for d = 1:length(devices)                                                   %Ste
     obj = zeros(1,2);                                                       %Create a matrix to hold timescale uicontrol handles.
     str = {'Overall Hit Rate',...
         'Total Trial Count',...
-        'Mean Peak Force',...
+%         'Mean Peak Force',...
         'Median Peak Force',...
-        'Trial Count',...
-        'Hits in First 5 Minutes',...
-        'Trials in First 5 Minutes',...
-        'Max. Hits in Any 5 Minutes',...
-        'Max. Trials in Any 5 Minutes',...
-        'Max. Hit Rate in Any 5 Minutes',...
-        'Min. Inter-Trial Interval (Smoothed)',...
-        'Mean Peak Impulse',...
-        'Median Peak Impulse'};                                             %List the available plots for the pull data.
+        'Trial Count'};
+%         'Hits in First 5 Minutes',...
+%         'Trials in First 5 Minutes',...
+%         'Max. Hits in Any 5 Minutes',...
+%         'Max. Trials in Any 5 Minutes',...
+%         'Max. Hit Rate in Any 5 Minutes',...
+%         'Min. Inter-Trial Interval (Smoothed)',...
+%         'Mean Peak Impulse',...
+%         'Median Peak Impulse'};                                             %List the available plots for the pull data.
     if any(strcmpi(devices{d},{'knob','lever'}))                            %If we're plotting knob data...
         str(2:3) = {'Mean Peak Angle','Median Peak Angle'};                 %Set the plots to show "angle" instead of "force".
     elseif ~any(strcmpi(devices{d},{'knob','lever','pull'}))                %Otherwise, if this isn't pull, knob, or lever data...
@@ -391,10 +390,33 @@ end
 %% This subfunction sorts the data into single-session values and sends it to the plot function.
 function Plot_Timeline(hObject,~,obj,fid,data,Weeks,AnimalData)
 TrialViewerData = data;
+plotdata = data;
+for q = 1:length(AnimalData);
+    Sessions(q,:) = str2num(AnimalData(q).sessions);
+end
+for l = 1:size(Sessions,1);
+    for m = 1:size(Sessions,2);
+        SessionCount(l,m+1) = sum(Sessions(l,1:m));
+    end
+end
+for l = 1:size(Sessions,1);
+    for m = 1:size(Sessions,2);
+        HitRate(l,m) = nanmean(data(l).hitrate((SessionCount(l,m)+1):SessionCount(l,m+1)));
+        TotalTrialCount(l,m) = nanmean(data(l).numtrials((SessionCount(l,m)+1):SessionCount(l,m+1)));
+        MeanPeak(l,m) = nanmean(data(l).peak((SessionCount(l,m)+1):SessionCount(l,m+1)));
+        MedianPeak(l,m) = nanmedian(data(l).peak((SessionCount(l,m)+1):SessionCount(l,m+1)));
+        HitsFirstFiveMinutes(l,m) = nanmean(data(l).first_hit_five((SessionCount(l,m)+1):SessionCount(l,m+1)));
+        TrialsFirstFiveMinutes(l,m) = nanmean(data(l).first_trial_five((SessionCount(l,m)+1):SessionCount(l,m+1)));
+        MaxHitsInAnyFive(l,m) = nanmean(data(l).any_hit_five((SessionCount(l,m)+1):SessionCount(l,m+1)));
+        MaxTrialsInAnyFive(l,m) = nanmean(data(l).any_trial_five((SessionCount(l,m)+1):SessionCount(l,m+1)));        
+    end
+end
+
 % set(hObject,'fontweight','bold','foregroundcolor',[0 0.5 0]);               %Make this pushbutton's text bold.
 % set(setdiff(obj(2:4),hObject),'fontweight','normal','foregroundcolor','k'); %Make the other pushbutton's text normal and black.
 fig = get(hObject,'parent');                                                %Grab the parent figure of the pushbutton.
 data = get(fig,'userdata');                                                 %Grab the plot data from the figure's 'UserData' property.
+
 % i = find(hObject == obj);                                                   %Find the index of the button that called the function.
 t = unique(horzcat(data.times));                                            %Horizontally concatenate all of the timestamps.
 % if i == 2                                                                   %If the user wants to plot by session...
@@ -413,57 +435,71 @@ t = [t; t + 7]';                                                        %Set the
 str = get(obj(1),'string');                                                 %Grab the strings from the pop-up menu.
 i = get(obj(1),'value');                                                    %Grab the value of the pop-up menu.
 str = str{i};                                                               %Grab the selected plot type.
-plotdata = struct([]);                                                      %Create a structure to hold plot data.
-for r = 1:length(data)                                                      %Step through each rat in the data structure.
-    plotdata(r).rat = data(r).rat;                                          %Copy the rat name to the plot data structure.
-    y = nan(1,size(t,1));                                                   %Pre-allocate a matrix to hold the data y-coordinates.
-    s = cell(1,size(t,1));                                                  %Pre-allocate a cell array to hold the last stage of each time frame.
-    n = cell(1,size(t,1));                                                  %Pre-allocate a cell array to hold the hit rate and trial count text.
-    for i = 1:size(t,1)                                                     %Step through the specified time frames.
-        j = data(r).times >= t(i,1) & data(r).times < t(i,2);               %Find all sessions within the time frame.
-        if any(j)                                                           %If any sessions are found.
+% plotdata = struct([]); 
+pos = get(hObject,'position');                                              %Grab the current figure size, in centimeters.
+w = pos(3);                                                                 %Grab the width of the figure.
+h = pos(4);   
+ui_h = 0.07*h;                                                              %Set the heigh of all uicontrols.
+sp1 = 0.02*h;                                                               %Set the vertical spacing between axes and uicontrols.
+sp2 = 0.01*w;                                                               %Set the horizontal spacing between axes and uicontrols.
+fontsize = 0.6*28.34*ui_h;   %Create a structure to hold plot data.
+% for r = 1:length(data)                                                      %Step through each rat in the data structure.
+%     plotdata(r).rat = data(r).rat;                                          %Copy the rat name to the plot data structure.
+%     y = nan(1,size(t,1));                                                   %Pre-allocate a matrix to hold the data y-coordinates.
+%     s = cell(1,size(t,1));                                                  %Pre-allocate a cell array to hold the last stage of each time frame.
+%     n = cell(1,size(t,1));                                                  %Pre-allocate a cell array to hold the hit rate and trial count text.
+%     for i = 1:size(t,1)                                                     %Step through the specified time frames.
+%         j = data(r).times >= t(i,1) & data(r).times < t(i,2);               %Find all sessions within the time frame.
+%         if any(j)                                                           %If any sessions are found.
             if strcmpi(str,'overall hit rate')                              %If we're plotting overall hit rate...
-                y(i) = nanmean(data(r).hitrate(j));                         %Grab the mean hit rate over this time frame.
-            elseif strcmpi(str,'total trial count')                         %If we're plotting trial count...
-                y(i) = nanmean(data(r).numtrials(j));                       %Grab the mean number of trials over this time frame.
+                gcf; plot(HitRate');   
+                
+                
+               
+                %                  y(i) = nanmean(data(r).hitrate(j));                         %Grab the mean hit rate over this time frame.
+%             elseif strcmpi(str,'total trial count')                         %If we're plotting trial count...
+%                 y(i) = nanmean(data(r).numtrials(j));                       %Grab the mean number of trials over this time frame.
             elseif any(strcmpi(str,{'median peak force',...
                     'median peak angle','median signal peak'}))             %If we're plotting the median signal peak...
-                y(i) = nanmedian(data(r).peak(j));                          %Grab the mean signal peak over this time frame.
+                gcf; plot(MedianPeak');
+%                 y(i) = nanmedian(data(r).peak(j));                          %Grab the mean signal peak over this time frame.
             elseif any(strcmpi(str,{'mean peak force',...
                     'mean peak angle','mean signal peak'}))                 %If we're plotting the mean signal peak...
-                y(i) = nanmean(data(r).peak(j));                            %Grab the mean signal peak over this time frame.
+                gcf; plot(MeanPeak');
+%                 y(i) = nanmean(data(r).peak(j));                            %Grab the mean signal peak over this time frame.
             elseif strcmpi(str,'trial count')                               %If we're plotting number of trials....
-                y(i) = nanmean(data(r).numtrials(j));                       %Grab the mean number of trials over this time frame.
-            elseif strcmpi(str,'hits in first 5 minutes')                   %If we're plotting the hit count within the first 5 minutes.
-                y(i) = nanmean(data(r).first_hit_five(j));                  %Grab the mean number of hits within the first 5 minutes over this time frame.
-            elseif strcmpi(str,'trials in first 5 minutes')                 %If we're plotting the trial count within the first 5 minutes.
-                y(i) = nanmean(data(r).first_trial_five(j));                %Grab the mean number of hits within the first 5 minutes over this time frame.
-            elseif strcmpi(str,'max. hits in any 5 minutes')                %If we're plotting the maximum hit count within any 5 minutes.
-                y(i) = nanmean(data(r).any_hit_five(j));                    %Grab the mean maximum number of hits within any 5 minutes over this time frame.
-            elseif strcmpi(str,'max. trials in any 5 minutes')              %If we're plotting the maximum trial count within any 5 minutes.
-                y(i) = nanmean(data(r).any_trial_five(j));                  %Grab the mean maximum number of trials within any 5 minutes over this time frame.
-            elseif strcmpi(str,'max. hit rate in any 5 minutes')            %If we're plotting the maximum hit rate within any 5 minutes.
-                y(i) = nanmean(data(r).any_hitrate_five(j));                %Grab the mean maximum hit rate within any 5 minutes over this time frame.
-            elseif strcmpi(str,'min. inter-trial interval (smoothed)')      %If we're plotting the minimum inter-trial interval.
-                y(i) = nanmean(data(r).min_iti(j));                         %Grab the mean minimum inter-trial interval over this time frame.
-            elseif strcmpi(str,'median peak impulse')                       %If we're plotting the median signal impulse...
-                y(i) = nanmedian(data(r).impulse(j));                       %Grab the mean signal impulse over this time frame.
-            elseif strcmpi(str,'mean peak impulse')                         %If we're plotting the mean signal impulse...
-                y(i) = nanmean(data(r).impulse(j));                         %Grab the mean signal impulse over this time frame.
+                gcf; plot(TotalTrialCount');
+%                 y(i) = nanmean(data(r).numtrials(j));                       %Grab the mean number of trials over this time frame.
+%             elseif strcmpi(str,'hits in first 5 minutes')                   %If we're plotting the hit count within the first 5 minutes.
+%                 y(i) = nanmean(data(r).first_hit_five(j));                  %Grab the mean number of hits within the first 5 minutes over this time frame.
+%             elseif strcmpi(str,'trials in first 5 minutes')                 %If we're plotting the trial count within the first 5 minutes.
+%                 y(i) = nanmean(data(r).first_trial_five(j));                %Grab the mean number of hits within the first 5 minutes over this time frame.
+%             elseif strcmpi(str,'max. hits in any 5 minutes')                %If we're plotting the maximum hit count within any 5 minutes.
+%                 y(i) = nanmean(data(r).any_hit_five(j));                    %Grab the mean maximum number of hits within any 5 minutes over this time frame.
+%             elseif strcmpi(str,'max. trials in any 5 minutes')              %If we're plotting the maximum trial count within any 5 minutes.
+%                 y(i) = nanmean(data(r).any_trial_five(j));                  %Grab the mean maximum number of trials within any 5 minutes over this time frame.
+%             elseif strcmpi(str,'max. hit rate in any 5 minutes')            %If we're plotting the maximum hit rate within any 5 minutes.
+%                 y(i) = nanmean(data(r).any_hitrate_five(j));                %Grab the mean maximum hit rate within any 5 minutes over this time frame.
+%             elseif strcmpi(str,'min. inter-trial interval (smoothed)')      %If we're plotting the minimum inter-trial interval.
+%                 y(i) = nanmean(data(r).min_iti(j));                         %Grab the mean minimum inter-trial interval over this time frame.
+%             elseif strcmpi(str,'median peak impulse')                       %If we're plotting the median signal impulse...
+%                 y(i) = nanmedian(data(r).impulse(j));                       %Grab the mean signal impulse over this time frame.
+%             elseif strcmpi(str,'mean peak impulse')                         %If we're plotting the mean signal impulse...
+%                 y(i) = nanmean(data(r).impulse(j));                         %Grab the mean signal impulse over this time frame.
             end
-            temp = [nanmean(data(r).hitrate(j)),...
-                nansum(data(r).numtrials(j))];                              %Grab the mean hit rate and total number of trials over this time frame.
-            temp(1) = temp(1)*temp(2);                                      %Calculate the number of hits in the total number of trials.
-            n{i} = sprintf('%1.0f hits/%1.0f trials',temp);                 %Create a string showing the number of hits and trials.
-            j = find(j,1,'last');                                           %Find the last matching session.
-            s{i} = data(r).stage{j};                                        %Save the last stage the rat ran on for this trime frame.            
-        end
-    end
-    plotdata(r).x = t(~isnan(y),:);                                         %Grab the daycodes at the start of each time frame.
-    plotdata(r).y = y(~isnan(y))';                                          %Save only the non-NaN y-coordinates.
-    plotdata(r).s = s(~isnan(y))';                                          %Save the stage information for each time frame.
-    plotdata(r).n = n(~isnan(y))';                                          %Save the hit rate and trial information for each time frame.
-end
+%             temp = [nanmean(data(r).hitrate(j)),...
+%                 nansum(data(r).numtrials(j))];                              %Grab the mean hit rate and total number of trials over this time frame.
+%             temp(1) = temp(1)*temp(2);                                      %Calculate the number of hits in the total number of trials.
+%             n{i} = sprintf('%1.0f hits/%1.0f trials',temp);                 %Create a string showing the number of hits and trials.
+%             j = find(j,1,'last');                                           %Find the last matching session.
+%             s{i} = data(r).stage{j};                                        %Save the last stage the rat ran on for this trime frame.            
+%         end
+%     end
+%     plotdata(r).x = t(~isnan(y),:);                                         %Grab the daycodes at the start of each time frame.
+%     plotdata(r).y = y(~isnan(y))';                                          %Save only the non-NaN y-coordinates.
+%     plotdata(r).s = s(~isnan(y))';                                          %Save the stage information for each time frame.
+%     plotdata(r).n = n(~isnan(y))';                                          %Save the hit rate and trial information for each time frame.
+% end
 ax = get(fig,'children');                                                   %Grab all children of the figure.
 ax(~strcmpi(get(ax,'type'),'axes')) = [];                                   %Kick out all non-axes objects.
 if isempty(fid)                                                             %If no text file handle was passed to this function...
@@ -589,13 +625,13 @@ linewidth = 0.1*h;                                                          %Set
 markersize = 0.75*h;                                                        %Set the marker size for the plots.
 fontsize = 0.6*h;                                                           %Set the fontsize for all text objects.
 obj = get(ax,'children');                                                   %Grab all children of the axes.
-temp = vertcat(get(obj,'userdata'));                                        %Vertically concatenate the 'UserData' from each objects.
-temp = vertcat(temp{:});                                                    %Change the 'UserData' from a cell array to matrix.
-i = strcmpi(get(obj,'type'),'line') & temp == 1;                            %Find all plot line objects.
+% temp = vertcat(get(obj,'userdata'));                                        %Vertically concatenate the 'UserData' from each objects.
+% temp = vertcat(temp{:});                                                    %Change the 'UserData' from a cell array to matrix.
+i = strcmpi(get(obj,'type'),'line') %& temp == 1;                            %Find all plot line objects.
 set(obj(i),'linewidth',linewidth);                                          %Set the linewidth for all plot line objects.
-i = strcmpi(get(obj,'type'),'line') & temp == 2;                            %Find all plot marker objects.
+i = strcmpi(get(obj,'type'),'line') %& temp == 2;                            %Find all plot marker objects.
 set(obj(i),'markersize',markersize);                                        %Set the markersize for all plot line objects.
-i = strcmpi(get(obj,'type'),'line') & temp == 3;                            %Find all grid line objects.
+i = strcmpi(get(obj,'type'),'line') %& temp == 3;                            %Find all grid line objects.
 set(obj(i),'linewidth',0.5*linewidth);                                      %Set the linewidth for all grid line objects.
 i = strcmpi(get(obj,'type'),'text');                                        %Find all text objects.
 set(obj(i),'fontsize',fontsize);                                            %Set the font size for all text objects.
@@ -612,42 +648,42 @@ h = temp(4);                                                                %Gra
 linewidth = 0.1*h;                                                          %Set the linewidth for the plots.
 markersize = 0.75*h;                                                        %Set the marker size for the plots.
 fontsize = 0.6*h;                                                           %Set the fontsize for all text objects.
-cla(ax);                                                                    %Clear the axes.
-colors = hsv(length(plotdata));                                             %Grab unique colors for all the rats.
+% cla(ax);                                                                    %Clear the axes.
+% colors = hsv(length(plotdata));                                             %Grab unique colors for all the rats.
 hoverdata = struct([]);                                                     %Create an empty structure to hold data for the MouseHover function.
-for r = 1:length(plotdata)                                                  %Step through each rat.
-    line(mean(plotdata(r).x,2),plotdata(r).y,'color',colors(r,:),...
-        'linewidth',linewidth,'userdata',1,'parent',ax);                    %Show the rat's performance as a thick line.
-    for i = 1:size(plotdata(r).x,1)                                         %Step through each timepoint.
-        l = line(mean(plotdata(r).x(i,:)),plotdata(r).y(i),...
-            'markeredgecolor',colors(r,:),'linestyle','none',...
-            'markerfacecolor',colors(r,:),'marker','.',...
-            'linewidth',linewidth,'markersize',markersize,'userdata',2,...
-            'parent',ax);                                                   %Mark each session with a unique marker.        
-        hoverdata(end+1).xy = [mean(plotdata(r).x(i,:)),plotdata(r).y(i)];  %Save the x- and y-coordinates.
-        if rem(plotdata(r).x(i,1),1) ~= 0                                   %If the timestamp is a fractional number of days...
-            temp = datestr(plotdata(r).x(i,1),'mm/dd/yyyy, HH:MM');         %Show the date and the time.
-        elseif plotdata(r).x(i,2) - plotdata(r).x(i,1) == 1                 %If the timestamps only cover one day...
-            temp = datestr(plotdata(r).x(i,1),'mm/dd/yyyy');                %Show only the date.
-        else                                                                %Otherwise...
-            temp = [datestr(plotdata(r).x(i,1),'mm/dd/yyyy') '-' ...
-                datestr(plotdata(r).x(i,2)-1,'mm/dd/yyyy')];                %Show the date range.
-        end
-        hoverdata(end).txt = {plotdata(r).rat,plotdata(r).s{i},...
-            temp,plotdata(r).n{i}};                                         %Save the rat's name, stage, date, and hit rate/num trials.
-        hoverdata(end).handles = l;                                         %Save the line handle for the point.
-    end
-end
-temp = vertcat(hoverdata.xy);                                               %Grab all of the datapoint coordinates.
-x = [min(temp(:,1)), max(temp(:,1))];                                       %Find the minimim and maximum x-values.
-x = x + [-0.05,0.05]*(x(2) - x(1));                                         %Add some padding to the x-axis limits.
-if length(x) < 2 || any(isnan(x))                                           %If there are any missing x values.
-    x = now + [-1,1];                                                       %Set arbitrary x-axis limits.
-end
-if x(1) == x(2)                                                             %If the x-axis limits are the same...
-    x = x + [-1,1];                                                         %Add a day to each side of the single point.
-end
-xlim(ax,x);                                                                 %Set the x-axis limits.
+% for r = 1:length(plotdata)                                                  %Step through each rat.
+%     line(mean(plotdata(r).x,2),plotdata(r).y,'color',colors(r,:),...
+%         'linewidth',linewidth,'userdata',1,'parent',ax);                    %Show the rat's performance as a thick line.
+%     for i = 1:size(plotdata(r).x,1)                                         %Step through each timepoint.
+%         l = line(mean(plotdata(r).x(i,:)),plotdata(r).y(i),...
+%             'markeredgecolor',colors(r,:),'linestyle','none',...
+%             'markerfacecolor',colors(r,:),'marker','.',...
+%             'linewidth',linewidth,'markersize',markersize,'userdata',2,...
+%             'parent',ax);                                                   %Mark each session with a unique marker.        
+%         hoverdata(end+1).xy = [mean(plotdata(r).x(i,:)),plotdata(r).y(i)];  %Save the x- and y-coordinates.
+%         if rem(plotdata(r).x(i,1),1) ~= 0                                   %If the timestamp is a fractional number of days...
+%             temp = datestr(plotdata(r).x(i,1),'mm/dd/yyyy, HH:MM');         %Show the date and the time.
+%         elseif plotdata(r).x(i,2) - plotdata(r).x(i,1) == 1                 %If the timestamps only cover one day...
+%             temp = datestr(plotdata(r).x(i,1),'mm/dd/yyyy');                %Show only the date.
+%         else                                                                %Otherwise...
+%             temp = [datestr(plotdata(r).x(i,1),'mm/dd/yyyy') '-' ...
+%                 datestr(plotdata(r).x(i,2)-1,'mm/dd/yyyy')];                %Show the date range.
+%         end
+%         hoverdata(end).txt = {plotdata(r).rat,plotdata(r).s{i},...
+%             temp,plotdata(r).n{i}};                                         %Save the rat's name, stage, date, and hit rate/num trials.
+%         hoverdata(end).handles = l;                                         %Save the line handle for the point.
+%     end
+% end
+% temp = vertcat(hoverdata.xy);                                               %Grab all of the datapoint coordinates.
+% x = [min(temp(:,1)), max(temp(:,1))];                                       %Find the minimim and maximum x-values.
+% x = x + [-0.05,0.05]*(x(2) - x(1));                                         %Add some padding to the x-axis limits.
+% if length(x) < 2 || any(isnan(x))                                           %If there are any missing x values.
+%     x = now + [-1,1];                                                       %Set arbitrary x-axis limits.
+% end
+% if x(1) == x(2)                                                             %If the x-axis limits are the same...
+%     x = x + [-1,1];                                                         %Add a day to each side of the single point.
+% end
+% xlim(ax,x);                                                                 %Set the x-axis limits.
 y = [min(temp(:,2)), max(temp(:,2))];                                       %Find the minimim and maximum x-values.
 y = y + [-0.05,0.05]*(y(2) - y(1));                                         %Add some padding to the y-axis limits.
 if length(y) < 2 || any(isnan(y))                                           %If there are any missing y values.
@@ -656,22 +692,22 @@ end
 if y(1) == y(2)                                                             %If the y-axis limits are the same...
     y = y + [-0.1, 0.1];                                                    %Add 0.1 to each side of the single point.
 end
-ylim(ax,y);                                                                 %Set the y-axis limits.
-set(ax,'xticklabel',datestr(get(ax,'xtick'),'mm/dd'),...
-    'fontsize',fontsize,'fontweight','bold','linewidth',linewidth);         %Show the date for each x-axis tick.
+% ylim(ax,y);                                                                 %Set the y-axis limits.
+% set(ax,'xticklabel',datestr(get(ax,'xtick'),'mm/dd'),...
+%     'fontsize',fontsize,'fontweight','bold','linewidth',linewidth);         %Show the date for each x-axis tick.
 ylabel(ax,str,'fontweight','bold','fontsize',1.1*fontsize);                 %Label the x-axis.
-temp = get(ax,'ytick');                                                     %Grab the y-axis ticks.
-for i = 1:length(temp)                                                      %Step through the y-axis ticks.
-    temp(i) = line(xlim(ax),temp(i)*[1,1],'color',[0.75 0.75 0.75],...
-        'linestyle','--','linewidth',0.5*linewidth,'userdata',3,...
-        'parent',ax);                                                       %Draw a gridline at each y-tick.
-end
-uistack(temp,'bottom');                                                     %Send all grid lines to the bottom.
-txt = text(x(1),y(1),' ','fontsize',fontsize,'margin',2,...
-    'backgroundcolor','w','edgecolor','k','visible','off',...
-    'verticalalignment','bottom','horizontalalignment','center',...
-    'userdata',4);                                                          %Create a text object for labeling points.
-set(fig,'WindowButtonMotionFcn',{@MouseHover,ax,hoverdata,txt});            %Set the mouse hover function for the figure.
+% temp = get(ax,'ytick');                                                     %Grab the y-axis ticks.
+% for i = 1:length(temp)                                                      %Step through the y-axis ticks.
+%     temp(i) = line(xlim(ax),temp(i)*[1,1],'color',[0.75 0.75 0.75],...
+%         'linestyle','--','linewidth',0.5*linewidth,'userdata',3,...
+%         'parent',ax);                                                       %Draw a gridline at each y-tick.
+% end
+% uistack(temp,'bottom');                                                     %Send all grid lines to the bottom.
+% txt = text(x(1),y(1),' ','fontsize',fontsize,'margin',2,...
+%     'backgroundcolor','w','edgecolor','k','visible','off',...
+%     'verticalalignment','bottom','horizontalalignment','center',...
+%     'userdata',4);                                                          %Create a text object for labeling points.
+% set(fig,'WindowButtonMotionFcn',{@MouseHover,ax,hoverdata,txt});            %Set the mouse hover function for the figure.
 % set(fig,'ButtonDownFcn', {@TrialViewer,ax,hoverdata,txt});
 
 %% This function executes while the mouse hovers over the axes of an interactive figure.
