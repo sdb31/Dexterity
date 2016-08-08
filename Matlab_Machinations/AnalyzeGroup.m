@@ -6,9 +6,11 @@ end
 
 cd(datapath);
 Info = dir(datapath);
+
 choice = questdlg('Would you like to create a new experiment or choose from an existing one?',...
     'Choose or Create Experiment',...
     'New Experiment', 'Existing Experiment', 'Cancel');
+
 
 switch choice
     case 'New Experiment'
@@ -213,7 +215,8 @@ switch choice
                 'listsize',[250 250],...
                 'initialvalue',1:length(rat_list),...
                 'uh',25,...
-                'ListString',rat_list);
+                'ListString',rat_list,...
+                'ButtonDownFcn', {@SelectGroups});
             if isempty(g)                                                               %If the user clicked "cancel" or closed the dialog...
                 return                                                                  %Skip execution of the rest of the function.
             else                                                                        %Otherwise...
@@ -252,6 +255,9 @@ switch choice
         save(filename, 'config');
 end
 
+if isempty(choice) == 1;
+    return
+else
 path = 'C:\AnalyzeGroup';    
 cd(path);
 Info = dir(path);
@@ -309,8 +315,12 @@ Plot = uicontrol('Parent', fig, 'Style', 'pushbutton', 'HorizontalAlignment', 'l
     'string','Plot', 'units', 'normalized', 'Position', [.82 .86 .15 .1], 'Fontsize', 12);
 set(Experiment,'callback', {@ExperimentCallback,GUI_Subjects,GUI_GroupNames,ExperimentNames,Subjects,Groups,Events});
 set(Plot, 'callback', {@PlotButton,Experiment,ExperimentNames});
+end
 
 % function PlotButton(hObject,~,Experiment,ExperimentNames);
+function SelectGroups(hObject,~)
+uiwait(msgbox('Hello'));
+
 
 
 
