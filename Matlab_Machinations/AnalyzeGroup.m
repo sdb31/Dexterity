@@ -323,7 +323,7 @@ end
 
 
 
-function PlotButton(hObject,~,Experiment,ExperimentNames)
+function PlotButton(hObject,~, Experiment,ExperimentNames)
 index_selected = get(Experiment,'value');
 SelectedExperiment = ExperimentNames(index_selected);
 temp = ['C:\AnalyzeGroup\' SelectedExperiment{:} '\ConfigFiles'];
@@ -383,14 +383,47 @@ for d = 1:length(devices)                                                   %Ste
 %     set(obj(2:4),'callback',{@Plot_Timeline,obj,[],data});                       %Set the callback for the timescale buttons.
     set(obj(2),'callback',{@Export_Data,ax,obj});                           %Set the callback for the export button.
     set(fig,'userdata',data);                                           %Save the plot data to the figure's 'UserData' property.
-    Plot_Timeline(obj(2),[],obj,[],data,Weeks,AnimalData);                                        %Call the function to plot the session data in the figure.
+    Plot_Timeline(obj(2),[],obj,[],data,Weeks,AnimalData,index_selected);                                        %Call the function to plot the session data in the figure.
     set(fig,'ResizeFcn',{@Resize,ax,obj});
 end
 
 %% This subfunction sorts the data into single-session values and sends it to the plot function.
-function Plot_Timeline(hObject,~,obj,fid,data,Weeks,AnimalData)
+function Plot_Timeline(hObject,~,obj,fid,data,Weeks,AnimalData,index_selected)
+path = 'C:\AnalyzeGroup';    
+cd(path);
+Info = dir(path);
+ExperimentNames = {Info.name};
+ExperimentNames = ExperimentNames(3:end);
+TimelineData.Experiment = ExperimentNames;
+for i = 1:length(ExperimentNames);
+   Counter = 1;
+   testpath = {};
+   testpath = ['C:\AnalyzeGroup\' ExperimentNames{i} '\TreatmentGroups'] ;
+   Info_Groups = dir(testpath);
+   GroupNames = {Info_Groups.name};
+   GroupNames = GroupNames(3:end);
+   GUI_GroupNames{i} = GroupNames;
+   
+   for k = 1:length(GroupNames)
+       subjectpath = {};
+       subjectpath = [testpath '\' GroupNames{k}];
+       Info_Subjects = dir(subjectpath);
+       SubjectNames = {Info_Subjects.name};
+       handles(k).SubjectNames = SubjectNames(3:end);       
+       for t = 1:length(handles(k).SubjectNames);
+          GUI_Subjects{i,Counter} = [handles(k).SubjectNames{t} ' (' GroupNames{k} ')']; 
+%           TimelineData.Experiment(i).GroupName(k).SubjectNames = SubjectNames(t);
+          Counter = Counter + 1;
+       end
+   end
+%    TimelineData.Experiment(i) = ExperimentNames(i);
+   TimelineData.Experiment(i).GroupNames = GroupNames;
+   TimelineData.Experiment(i).GroupNames.SubjectNames = SubjectNames;
+end
+Info = dir; temp = {Info.name}; temp = temp{3}; load(temp);
 TrialViewerData = data;
 plotdata = data;
+GroupNames = GUI_GroupNames{index_selected};
 for q = 1:length(AnimalData);
     Sessions(q,:) = str2num(AnimalData(q).sessions);
 end
