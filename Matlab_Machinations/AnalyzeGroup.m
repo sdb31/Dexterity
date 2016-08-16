@@ -485,7 +485,7 @@ markersize = 0.75*h;                                                        %Set
 % fontsize = 0.6*h;  
 colors = 'kbrgy';
 if strcmpi(str,'overall hit rate')                              %If we're plotting overall hit rate...
-    ax = gcf; cla(ax); 
+    ax = gcf; cla(ax); %tempaxis = gca;
     for p = 1:length(TimelineData(index_selected).Groups)
         HitRate(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.MeanHitRate);
         GroupLegend(p) = TimelineData(index_selected).Groups(p).name;
@@ -495,6 +495,7 @@ if strcmpi(str,'overall hit rate')                              %If we're plotti
         CSV_Data(p,:) = HitRate(p,:);
     end
     legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth);
+%     tempaxis.YLim(1) = 0;
 %     set(gca,'Fontsize', 7);
 elseif any(strcmpi(str,{'median peak force',...
         'median peak angle','median signal peak'}))             %If we're plotting the median signal peak...
@@ -507,7 +508,7 @@ elseif any(strcmpi(str,{'median peak force',...
         hold off;
         CSV_Data(p,:) = MedianPeak(p,:);
     end
-    legend(GroupLegend,0); box off; set(gca, 'TickDir', 'out');
+    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth);
 elseif any(strcmpi(str,{'mean peak force',...
         'mean peak angle','mean signal peak'}))                 %If we're plotting the mean signal peak...
     ax = gcf; cla(ax);
@@ -519,7 +520,7 @@ elseif any(strcmpi(str,{'mean peak force',...
         hold off;
         CSV_Data(p,:) = MeanPeak(p,:);
     end
-    legend(GroupLegend,0); box off; set(gca, 'TickDir', 'out');
+    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth);
 elseif strcmpi(str,'trial count')                               %If we're plotting number of trials....
     ax = gcf; cla(ax);
     for p = 1:length(TimelineData(index_selected).Groups)
@@ -530,7 +531,7 @@ elseif strcmpi(str,'trial count')                               %If we're plotti
         hold off;
         CSV_Data(p,:) = TrialCount(p,:);
     end
-    legend(GroupLegend,0); box off; set(gca, 'TickDir', 'out');
+    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth);
 end
 
 t = unique(horzcat(data.times));                                            %Horizontally concatenate all of the timestamps.
