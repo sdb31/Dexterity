@@ -61,7 +61,48 @@ for r = 1:length(rats)                                                      %Ste
         keepers(r) = 0;                                                     %Mark the file for exclusion.
     end
 end
-files(keepers == 0) = [];                                                   %Kick out all files the user doesn't want to include.
+files(keepers == 0) = [];    %Kick out all files the user doesn't want to include.
+% for d = 1:length(rat_list)
+%     dispfiles(d).files = [];
+%     dispfiles(d).realfiles = [];
+% end
+% for q = 1:length(files)    
+%     r = 1;
+%     t = strfind(files{q},rat_list{r});
+%     if length(t) == 1;
+%         t = [];
+%     end
+%     while isempty(t) == 1;
+%         r = r + 1;
+%         t = strfind(files{q},rat_list{r});
+%         if length(t) == 1;
+%             t = [];
+%         end
+%     end
+%     Count = length(dispfiles(r).files);
+%     Count = Count + 1;
+%     dispfiles(r).files{Count} = files{q}(t(1):end);
+%     dispfiles(r).realfiles{Count} = files{q};
+% end
+% 
+% for d = 1:length(dispfiles)
+%     test = listdlg('PromptString', ['Which files would you like to include for Animal ' rat_list{d} '?'],...
+%         'name','File Selection',...
+%         'SelectionMode','multiple',...
+%         'listsize',[500 500],...
+%         'initialvalue',1:length(dispfiles(d).files),...
+%         'ListString',dispfiles(d).files);
+%     dispfiles(d).files = dispfiles(d).files(test);
+%     dispfiles(d).realfiles = dispfiles(d).realfiles(test);
+% end
+% Counter = 1;
+% for d = 1:length(dispfiles);
+%     for f = 1:length(dispfiles(d).realfiles);
+%         TestFiles(Counter) = dispfiles(d).realfiles(f);
+%         Counter = Counter + 1;
+%     end
+% end
+% files = TestFiles;
 
 %% Step through all of the data files and load them into a structure.
 set(0,'units','centimeters');                                               %Set the system units to centimeters.
@@ -298,7 +339,7 @@ for d = 1:length(devices)                                                   %Ste
     end
     set(obj(1),'callback',{@Set_Plot_Type,obj,data});                            %Set the callback for the pop-up menu.
     set(obj(2:4),'callback',{@Plot_Timeline,obj,[],data});                       %Set the callback for the timescale buttons.
-    set(obj(5),'callback',{@Export_Data,ax,obj});                           %Set the callback for the export button.
+    set(obj(5),'callback',{@Export_Data,ax,obj,data});                           %Set the callback for the export button.
     set(fig,'userdata',data);                                           %Save the plot data to the figure's 'UserData' property.
     Plot_Timeline(obj(2),[],obj,[],data);                                        %Call the function to plot the session data in the figure.
     set(fig,'ResizeFcn',{@Resize,ax,obj});
@@ -471,7 +512,7 @@ else                                                                        %Oth
 end
 
 %% This subfunction sorts the data into daily values and sends it to the plot function.
-function Export_Data(hObject,~,ax,obj)
+function Export_Data(hObject,~,ax,obj,data)
 output = questdlg(['Would you like to export the data as a spreadsheet '...
     'or figure image?'],'Data Type?','Spreadsheet','Image','Both','Both');  %Ask the user if they'd like to export the data as a spreadsheet or image.
 fig = get(hObject,'parent');                                                %Grab the parent figure of the export button.
@@ -508,7 +549,7 @@ if any(strcmpi({'image','both'},output))                                    %If 
     set(ax,'units','centimeters','position',pos);                           %Reset the position of the axes.
     set(obj,'visible','on');                                                %Make all of the other figures visible again.
     i = strcmpi(get(obj,'fontweight'),'bold');                              %Find the pushbutton with the bold fontweight.
-    Plot_Timeline(obj(i),[],obj,[]);                                        %Call the subfunction to plot the data by the appropriate timeline.
+    Plot_Timeline(obj(i),[],obj,[],data);                                        %Call the subfunction to plot the data by the appropriate timeline.
     set(fig,'color',temp,'ResizeFcn',{@Resize,ax,obj});                     %Set the Resize function for the figure.
     drawnow;                                                                %Immediately update the figure.    
 end
@@ -528,7 +569,7 @@ if any(strcmpi({'spreadsheet','both'},output))                              %If 
     end
     fid = fopen([path file],'wt');                                          %Open a new text file to write the data to.   
     i = strcmpi(get(obj,'fontweight'),'bold');                              %Find the pushbutton with the bold fontweight.
-    Plot_Timeline(obj(i),[],obj,fid);                                       %Call the subfunction to write the data by the appropriate timeline.
+    Plot_Timeline(obj(i),[],obj,fid,data);                                       %Call the subfunction to write the data by the appropriate timeline.
     fclose(fid);                                                            %Close the figure.
     winopen([path file]);                                                   %Open the CSV file.
 end

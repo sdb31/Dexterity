@@ -74,6 +74,47 @@ switch choice
             end
         end
         files(keepers == 0) = [];
+        for d = 1:length(rat_list)
+            dispfiles(d).files = [];
+            dispfiles(d).realfiles = [];
+        end
+        for q = 1:length(files)
+            r = 1;
+            t = strfind(files{q},rat_list{r});
+            if length(t) == 1;
+                t = [];
+            end
+            while isempty(t) == 1;
+                r = r + 1;
+                t = strfind(files{q},rat_list{r});
+                if length(t) == 1;
+                    t = [];
+                end
+            end
+            Count = length(dispfiles(r).files);
+            Count = Count + 1;
+            dispfiles(r).files{Count} = files{q}(t(1):end);
+            dispfiles(r).realfiles{Count} = files{q};
+        end
+        
+        for d = 1:length(dispfiles)
+            test = listdlg('PromptString', ['Which files would you like to include for Animal ' rat_list{d} '?'],...
+                'name','File Selection',...
+                'SelectionMode','multiple',...
+                'listsize',[500 500],...
+                'initialvalue',1:length(dispfiles(d).files),...
+                'ListString',dispfiles(d).files);
+            dispfiles(d).files = dispfiles(d).files(test);
+            dispfiles(d).realfiles = dispfiles(d).realfiles(test);
+        end
+        Counter = 1;
+        for d = 1:length(dispfiles);
+            for f = 1:length(dispfiles(d).realfiles);
+                TestFiles(Counter) = dispfiles(d).realfiles(f);
+                Counter = Counter + 1;
+            end
+        end
+        files = TestFiles;
         %% Step through all of the data files and load them into a structure.
         set(0,'units','centimeters');                                               %Set the system units to centimeters.
         pos = get(0,'Screensize');                                                  %Grab the screensize.
