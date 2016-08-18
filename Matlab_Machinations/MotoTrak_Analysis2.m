@@ -138,25 +138,35 @@ for f = 1:length(files)                                                     %Ste
         warning(['ERROR READING: ' files{f}]);                              %Show which file had a read problem...
         warning(err.message);                                               %Show the actual error message.
     end
-    if isfield(temp,'trial') && length(temp.trial) >= 5 && ...
-             any(strcmpi(rat_list,temp.rat))                                 %If there were at least 5 trials...        
+    %     if isfield(temp,'trial') && length(temp.trial) >= 5 && ...
+    if any(strcmpi(rat_list,temp.rat))                                 %If there were at least 5 trials...
         s = length(data) + 1;                                               %Create a new field index.
         for field = {'rat','device','stage'}                               %Step through the fields we want to save from the data file...
             data(s).(field{1}) = temp.(field{1});                           %Grab each field from the data file and save it.
-        end
-        data(s).outcome = char([temp.trial.outcome]');                      %Grab the outcome of each trial.
-        data(s).thresh = [temp.trial.thresh]';                              %Grab the threshold for each trial.
-        data(s).starttime = [temp.trial.starttime]';                        %Grab the start time for each trial.
-        data(s).peak = nan(length(temp.trial),1);                           %Create a matrix to hold the peak force.
-        for t = 1:length(temp.trial)                                        %Step through every trial.
-            i = (temp.trial(t).sample_times >= 0 & ...
-                temp.trial(t).sample_times < 1000*temp.trial(t).hitwin);    %Find the indices for samples in the hit window.
-            if any(i ~= 0)                                                  %If there's any samples...
-                data(s).peak(t) = max(temp.trial(t).signal(i));             %Find the maximum force in each hit window.
-                data(s).impulse(t) = max(diff(temp.trial(t).signal(i)));    %Find the maximum impulse in each hit window.
+        end        
+        if isfield(temp,'trial') == 0;
+%             uiwait(msgbox('Hello'));
+            data(s).outcome = [];
+            data(s).thresh = [];
+            data(s).starttime = [];
+            data(s).peak = [];
+            data(s).impulse = []; 
+            data(s).timestamp = temp.daycode;
+        else
+            data(s).outcome = char([temp.trial.outcome]');                      %Grab the outcome of each trial.
+            data(s).thresh = [temp.trial.thresh]';                              %Grab the threshold for each trial.
+            data(s).starttime = [temp.trial.starttime]';                        %Grab the start time for each trial.
+            data(s).peak = nan(length(temp.trial),1);                           %Create a matrix to hold the peak force.
+            for t = 1:length(temp.trial)                                        %Step through every trial.
+                i = (temp.trial(t).sample_times >= 0 & ...
+                    temp.trial(t).sample_times < 1000*temp.trial(t).hitwin);    %Find the indices for samples in the hit window.
+                if any(i ~= 0)                                                  %If there's any samples...
+                    data(s).peak(t) = max(temp.trial(t).signal(i));             %Find the maximum force in each hit window.
+                    data(s).impulse(t) = max(diff(temp.trial(t).signal(i)));    %Find the maximum impulse in each hit window.
+                end
             end
+            data(s).timestamp = data(s).starttime(1);                           %Grab the timestamp from the start of the first trial.
         end
-        data(s).timestamp = data(s).starttime(1);                           %Grab the timestamp from the start of the first trial.
         data(s).files = files{f};
     end
 end
@@ -249,6 +259,14 @@ for d = 1:length(devices)                                                   %Ste
             dates{i} = temp;
         end
         FinalDates{r} = dates{end};
+    end
+    for r = 1:length(plotdata);
+        temp_hitrate = isnan(plotdata(r).hitrate);
+        temp_peak = isnan(plotdata(r).peak);        
+        if ~isempty(find(temp_hitrate == 1, 1)) == 1;
+            plotdata(r).hitrate(temp_hitrate) = 0;
+            plotdata(r).peak(temp_peak) = 0;
+        end
     end
     pos = get(0,'Screensize');                                              %Grab the screensize.
     h = 5;                                                                 %Set the height of the figure, in centimeters.

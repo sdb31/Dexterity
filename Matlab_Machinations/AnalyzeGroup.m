@@ -149,8 +149,8 @@ switch choice
                 warning(['ERROR READING: ' files{f}]);                              %Show which file had a read problem...
                 warning(err.message);                                               %Show the actual error message.
             end
-            if isfield(temp,'trial') && length(temp.trial) >= 5 %&& ...
-                    %any(strcmpi(rat_list,temp.rat))                                 %If there were at least 5 trials...
+            %             if %isfield(temp,'trial') && length(temp.trial) >= 5 && ...
+            if any(strcmpi(rat_list,temp.rat))                                 %If there were at least 5 trials...
                 s = length(data) + 1;                                               %Create a new field index.
                 for field = {'rat','device','stage'}                               %Step through the fields we want to save from the data file...
                     data(s).(field{1}) = temp.(field{1});                           %Grab each field from the data file and save it.
@@ -245,6 +245,14 @@ switch choice
                         end
                     end
                 end
+            end
+        end
+        for r = 1:length(plotdata);
+            temp_hitrate = isnan(plotdata(r).hitrate);
+            temp_peak = isnan(plotdata(r).peak);
+            if ~isempty(find(temp_hitrate == 1, 1)) == 1;
+                plotdata(r).hitrate(temp_hitrate) = 0;
+                plotdata(r).peak(temp_peak) = 0;
             end
         end
         uiwait(msgbox('Great! Please assign subjects to each experimental group now.', 'Proceed to Subject Assignment'));        
