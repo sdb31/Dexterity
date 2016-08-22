@@ -170,6 +170,39 @@ switch choice
                 data(s).timestamp = data(s).starttime(1);                           %Grab the timestamp from the start of the first trial.
                 data(s).files = files{f};
                 data(s).filenames = files{f}(a+1:end);
+                for t = 1:length(data(s).trial)                                            %Step through each trial.
+                    a = find((data(s).trial(t).sample_times < 1000*data(s).trial(t).hitwin));       %Find all samples within the hit window.
+                    if strcmpi(data(s).threshtype,'degrees (bidirectional)')               %If the threshold type is bidirectional knob-turning...
+                        signal = abs(data(s).trial(t).signal(a) - ....
+                            data(s).trial(t).signal(1));                                   %Subtract the starting degrees value from the trial signal.
+                    elseif strcmpi(data(s).threshtype,'# of spins')                        %If the threshold type is the number of spins...
+                        temp = diff(data(s).trial(t).signal);                              %Find the velocity profile for this trial.
+                        temp = boxsmooth(temp,10);                                      %Boxsmooth the wheel velocity with a 100 ms smooth.
+                        [pks,i] = PeakFinder(temp,10);                                  %Find all peaks in the trial signal at least 100 ms apart.
+                        i(pks < 1) = [];                                                %Kick out all peaks that are less than 1 degree/sample.
+                        i = intersect(a,i+1)-1;                                         %Find all peaks that are in the hit window.
+                        signal = length(i);                                             %Set the trial signal to the number of wheel spins.
+                    elseif strcmpi(data(s).threshtype, 'degrees (total)')
+                        signal = data(s).trial(t).signal(a);
+                    else
+                        signal = data(s).trial(t).signal(a) - data(s).trial(t).signal(1);    %Grab the raw signal for the trial.
+                    end
+                    smooth_trial_signal = boxsmooth(signal);
+                    smooth_knob_velocity = boxsmooth(diff(smooth_trial_signal));                %Boxsmooth the velocity signal
+                    data(s).peak_velocity(t) = max(smooth_knob_velocity);
+                    knob_acceleration = boxsmooth(diff(smooth_knob_velocity));
+                    data(s).peak_acceleration(t) = max(knob_acceleration);
+                    if (data(s).trial(t).outcome == 72)                                   %If it was a hit
+                        hit_time = find(data(s).trial(t).signal >= ...                    %Calculate the hit time
+                            data(s).trial(t).thresh,1);
+                        data(s).latency_to_hit(t) = hit_time;                       %hit time is then latency to hit
+                    else
+                        data(s).latency_to_hit(t) = NaN;                            %If trial resulted in a miss, then set latency to hit to NaN
+                    end
+                end
+                data(s).peak_velocity = nanmean(data(s).peak_velocity);
+                data(s).peak_acceleration = nanmean(data(s).peak_acceleration);
+                data(s).latency_to_hit = nanmean(data(s).latency_to_hit);
             end
         end
         if ishandle(fig)                                                            %If the user hasn't closed the waitbar figure...

@@ -145,13 +145,20 @@ for f = 1:length(files)                                                     %Ste
             data(s).(field{1}) = temp.(field{1});                           %Grab each field from the data file and save it.
         end        
         if isfield(temp,'trial') == 0;
-%             uiwait(msgbox('Hello'));
-            data(s).outcome = [];
-            data(s).thresh = [];
-            data(s).starttime = [];
-            data(s).peak = [];
-            data(s).impulse = []; 
-            data(s).timestamp = temp.daycode;
+            KeepFile = questdlg(['There is no data in this file: ' files{f}(a+1:end)],...
+                'Keep or Discard File',...
+                'Keep', 'Discard', 'Discard');
+            switch KeepFile
+                case 'Keep'
+                    data(s).outcome = [];
+                    data(s).thresh = [];
+                    data(s).starttime = [];
+                    data(s).peak = [];
+                    data(s).impulse = [];
+                    data(s).timestamp = temp.daycode;
+                case 'Discard'
+                    date(s).timestamp = [];
+            end
         else
             data(s).outcome = char([temp.trial.outcome]');                      %Grab the outcome of each trial.
             data(s).thresh = [temp.trial.thresh]';                              %Grab the threshold for each trial.
@@ -166,8 +173,43 @@ for f = 1:length(files)                                                     %Ste
                 end
             end
             data(s).timestamp = data(s).starttime(1);                           %Grab the timestamp from the start of the first trial.
+            data(s).trial = temp.trial;
+            data(s).threshtype = temp.threshtype;
         end
         data(s).files = files{f};
+        for t = 1:length(data(s).trial)                                            %Step through each trial.
+            a = find((data(s).trial(t).sample_times < 1000*data(s).trial(t).hitwin));       %Find all samples within the hit window.
+            if strcmpi(data(s).threshtype,'degrees (bidirectional)')               %If the threshold type is bidirectional knob-turning...
+                signal = abs(data(s).trial(t).signal(a) - ....
+                    data(s).trial(t).signal(1));                                   %Subtract the starting degrees value from the trial signal.
+            elseif strcmpi(data(s).threshtype,'# of spins')                        %If the threshold type is the number of spins...
+                temp = diff(data(s).trial(t).signal);                              %Find the velocity profile for this trial.
+                temp = boxsmooth(temp,10);                                      %Boxsmooth the wheel velocity with a 100 ms smooth.
+                [pks,i] = PeakFinder(temp,10);                                  %Find all peaks in the trial signal at least 100 ms apart.
+                i(pks < 1) = [];                                                %Kick out all peaks that are less than 1 degree/sample.
+                i = intersect(a,i+1)-1;                                         %Find all peaks that are in the hit window.
+                signal = length(i);                                             %Set the trial signal to the number of wheel spins.
+            elseif strcmpi(data(s).threshtype, 'degrees (total)')
+                signal = data(s).trial(t).signal(a);
+            else
+                signal = data(s).trial(t).signal(a) - data(s).trial(t).signal(1);    %Grab the raw signal for the trial.
+            end
+            smooth_trial_signal = boxsmooth(signal);
+            smooth_knob_velocity = boxsmooth(diff(smooth_trial_signal));                %Boxsmooth the velocity signal
+            data(s).peak_velocity(t) = max(smooth_knob_velocity);
+            knob_acceleration = boxsmooth(diff(smooth_knob_velocity));
+            data(s).peak_acceleration(t) = max(knob_acceleration);
+            if (data(s).trial(t).outcome == 72)                                   %If it was a hit
+                hit_time = find(data(s).trial(t).signal >= ...                    %Calculate the hit time
+                    data(s).trial(t).thresh,1);
+                data(s).latency_to_hit(t) = hit_time;                       %hit time is then latency to hit
+            else
+                data(s).latency_to_hit(t) = NaN;                            %If trial resulted in a miss, then set latency to hit to NaN
+            end
+        end
+        data(s).peak_velocity = nanmean(data(s).peak_velocity);
+        data(s).peak_acceleration = nanmean(data(s).peak_acceleration);
+        data(s).latency_to_hit = nanmean(data(s).latency_to_hit);
     end
 end
 if ishandle(fig)                                                            %If the user hasn't closed the waitbar figure...
@@ -208,6 +250,8 @@ for d = 1:length(devices)                                                   %Ste
         plotdata(r).impulse = nan(1,length(i));                             %Pre-allocate a matrix to hold the average peak impulse for each session.
         plotdata(r).stage = cell(1,length(i));                              %Pre-allocate a cell array to hold the stage name for each session..
         plotdata(r).files = cell(1,length(i));
+        plotdata(r).peak_velocity = nan(1,length(i));
+        plotdata(r).latency = nan(1,length(i));        
         for s = 1:length(i)                                                 %Step through each session.
             plotdata(r).peak(s) = mean(data(i(s)).peak);                    %Save the mean signal peak for each session.
             plotdata(r).impulse(s) = mean(data(i(s)).impulse);              %Save the mean signal impulse peak for each session.
@@ -215,6 +259,8 @@ for d = 1:length(devices)                                                   %Ste
             plotdata(r).numtrials(s) = length(data(i(s)).outcome);          %Save the total number of trials for each session.
             plotdata(r).stage{s} = data(i(s)).stage;                        %Save the stage for each session.
             plotdata(r).files{s} = data(i(s)).files;
+            plotdata(r).peak_velocity(s) = data(i(s)).peak_velocity;
+            plotdata(r).latency(s) = data(i(s)).latency_to_hit;
             times = data(i(s)).starttime;                                   %Grab the trial start times.
             times = 86400*(times - data(i(s)).timestamp);                   %Convert the trial start times to seconds relative to the first trial.
             if any(times >= 300)                                            %If the session lasted for at least 5 minutes...
@@ -340,7 +386,9 @@ for d = 1:length(devices)                                                   %Ste
         'Max. Hit Rate in Any 5 Minutes',...
         'Min. Inter-Trial Interval (Smoothed)',...
         'Mean Peak Impulse',...
-        'Median Peak Impulse'};                                             %List the available plots for the pull data.
+        'Median Peak Impulse',...
+        'Peak Velocity',...
+        'Latency to Hit'};                                             %List the available plots for the pull data.
     if any(strcmpi(devices{d},{'knob','lever'}))                            %If we're plotting knob data...
         str(2:3) = {'Mean Peak Angle','Median Peak Angle'};                 %Set the plots to show "angle" instead of "force".
     elseif ~any(strcmpi(devices{d},{'knob','lever','pull'}))                %Otherwise, if this isn't pull, knob, or lever data...
@@ -474,6 +522,10 @@ for r = 1:length(data)                                                      %Ste
                 y(i) = nanmedian(data(r).impulse(j));                       %Grab the mean signal impulse over this time frame.
             elseif strcmpi(str,'mean peak impulse')                         %If we're plotting the mean signal impulse...
                 y(i) = nanmean(data(r).impulse(j));                         %Grab the mean signal impulse over this time frame.
+            elseif strcmpi(str,'peak velocity');
+                y(i) = nanmean(data(r).peak_velocity(j));
+            elseif strcmpi(str,'latency to hit');
+                y(i) = nanmean(data(r).latency(j));
             end
             temp = [nanmean(data(r).hitrate(j)),...
                 nansum(data(r).numtrials(j))];                              %Grab the mean hit rate and total number of trials over this time frame.
@@ -765,3 +817,44 @@ switch choice
         path = Files{i}(1:a);
         MotoTrak_Supination_Viewer_Edit(files,path)
 end
+
+%% This function finds peaks for the velocity and latency
+% function [pks, sig] = Knob_Peak_Finder(signal)
+% %This code finds and kicks out peaks that have a std dev between
+% %them less than 1
+% 
+% smoothed_signal = boxsmooth(signal);                                        %smooth out the trial signal
+% [pks, sig] = findpeaks(smoothed_signal, 'MINPEAKHEIGHT', 5, ...
+%     'MINPEAKDISTANCE', 10);                                            %Find local maximma
+% n = length(pks);
+% j = 1;
+% if n>1
+%     while j <= n-1
+%         if (abs(pks(j)-pks(j+1)) <= 5)                                 % if the diff between 2 peaks is less than or equal to 5
+%             start_sig = sig(j);
+%             end_sig = sig(j+1);
+%             
+%             signal_interest = smoothed_signal(start_sig:end_sig);
+%             deviation_signal = std(signal_interest);
+%             
+%             if deviation_signal < 1
+%                 pks(j+1) = [];
+%                 sig(j+1) = [];
+%                 j = j-1;
+%             end
+%             
+%         end
+%         n = length(pks);
+%         j = j+1;
+%     end
+% end
+
+%% This subfunction finds peaks in the signal, accounting for equality of contiguous samples.
+function [pks,i] = PeakFinder(signal,smoothsize,init)
+temp = boxsmooth(signal,smoothsize);                                        %Smooth the signal.
+i = find(temp(2:end) - temp(1:end-1) > 0) + 1;                              %Find each point that's greater than the preceding point.
+j = find(temp(1:end-1) - temp(2:end) >= 0);                                 %Find each point that's greater than or equal to the following point.
+i = intersect(i,j);                                                         %Find any points that meet both criteria.
+j = (signal(i) < init);                                                     %Find all peaks smaller than the initiation threshold.
+i(j) = [];                                                                  %Kick out all sub-initiation peaks.
+pks = signal(i);                                                            %Grab the value of the signal at each peak.

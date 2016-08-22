@@ -1,6 +1,6 @@
 function Knob_Analysis_Suite(varargin)
 set(0,'units','centimeters');
-pos = get(0,'screensize');  
+pos = get(0,'screensize');   
 h = 0.3*pos(4);
 w = 4*h/3;  
 
