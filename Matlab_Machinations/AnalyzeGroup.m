@@ -155,21 +155,40 @@ switch choice
                 for field = {'rat','device','stage'}                               %Step through the fields we want to save from the data file...
                     data(s).(field{1}) = temp.(field{1});                           %Grab each field from the data file and save it.
                 end
-                data(s).outcome = char([temp.trial.outcome]');                      %Grab the outcome of each trial.
-                data(s).thresh = [temp.trial.thresh]';                              %Grab the threshold for each trial.
-                data(s).starttime = [temp.trial.starttime]';                        %Grab the start time for each trial.
-                data(s).peak = nan(length(temp.trial),1);                           %Create a matrix to hold the peak force.
-                for t = 1:length(temp.trial)                                        %Step through every trial.
-                    i = (temp.trial(t).sample_times >= 0 & ...
-                        temp.trial(t).sample_times < 1000*temp.trial(t).hitwin);    %Find the indices for samples in the hit window.
-                    if any(i ~= 0)                                                  %If there's any samples...
-                        data(s).peak(t) = max(temp.trial(t).signal(i));             %Find the maximum force in each hit window.
-                        data(s).impulse(t) = max(diff(temp.trial(t).signal(i)));    %Find the maximum impulse in each hit window.
+                if isfield(temp,'trial') == 0;
+                    KeepFile = questdlg(['There is no data in this file: ' files{f}(a+1:end)],...
+                        'Keep or Discard File',...
+                        'Keep', 'Discard', 'Discard');
+                    switch KeepFile
+                        case 'Keep'
+                            data(s).outcome = [];
+                            data(s).thresh = [];
+                            data(s).starttime = [];
+                            data(s).peak = [];
+                            data(s).impulse = [];
+                            data(s).timestamp = temp.daycode;
+                        case 'Discard'
+                            date(s).timestamp = [];
                     end
+                else
+                    data(s).outcome = char([temp.trial.outcome]');                      %Grab the outcome of each trial.
+                    data(s).thresh = [temp.trial.thresh]';                              %Grab the threshold for each trial.
+                    data(s).starttime = [temp.trial.starttime]';                        %Grab the start time for each trial.
+                    data(s).peak = nan(length(temp.trial),1);                           %Create a matrix to hold the peak force.
+                    for t = 1:length(temp.trial)                                        %Step through every trial.
+                        i = (temp.trial(t).sample_times >= 0 & ...
+                            temp.trial(t).sample_times < 1000*temp.trial(t).hitwin);    %Find the indices for samples in the hit window.
+                        if any(i ~= 0)                                                  %If there's any samples...
+                            data(s).peak(t) = max(temp.trial(t).signal(i));             %Find the maximum force in each hit window.
+                            data(s).impulse(t) = max(diff(temp.trial(t).signal(i)));    %Find the maximum impulse in each hit window.
+                        end
+                    end
+                    data(s).timestamp = data(s).starttime(1);                           %Grab the timestamp from the start of the first trial.
+                    data(s).trial = temp.trial;
+                    data(s).threshtype = temp.threshtype;
+                    data(s).files = files{f};
+                    data(s).filenames = files{f}(a+1:end);
                 end
-                data(s).timestamp = data(s).starttime(1);                           %Grab the timestamp from the start of the first trial.
-                data(s).files = files{f};
-                data(s).filenames = files{f}(a+1:end);
                 for t = 1:length(data(s).trial)                                            %Step through each trial.
                     a = find((data(s).trial(t).sample_times < 1000*data(s).trial(t).hitwin));       %Find all samples within the hit window.
                     if strcmpi(data(s).threshtype,'degrees (bidirectional)')               %If the threshold type is bidirectional knob-turning...
@@ -242,6 +261,8 @@ switch choice
                 plotdata(r).stage = cell(1,length(i));                              %Pre-allocate a cell array to hold the stage name for each session..
                 plotdata(r).files = cell(1,length(i));
                 plotdata(r).filenames = cell(1,length(i));
+                plotdata(r).peak_velocity = nan(1,length(i));
+                plotdata(r).latency = nan(1,length(i));
                 for s = 1:length(i)                                                 %Step through each session.
                     plotdata(r).peak(s) = mean(data(i(s)).peak);                    %Save the mean signal peak for each session.
                     plotdata(r).impulse(s) = mean(data(i(s)).impulse);              %Save the mean signal impulse peak for each session.
@@ -250,6 +271,8 @@ switch choice
                     plotdata(r).stage{s} = data(i(s)).stage;                        %Save the stage for each session.
                     plotdata(r).files{s} = data(i(s)).files;
                     plotdata(r).filenames{s} = data(i(s)).filenames;
+                    plotdata(r).peak_velocity(s) = data(i(s)).peak_velocity;
+                    plotdata(r).latency(s) = data(i(s)).latency_to_hit;
                     times = data(i(s)).starttime;                                   %Grab the trial start times.
                     times = 86400*(times - data(i(s)).timestamp);                   %Convert the trial start times to seconds relative to the first trial.
                     if any(times >= 300)                                            %If the session lasted for at least 5 minutes...
@@ -309,10 +332,10 @@ switch choice
             for r = 1:length(handles(g).rat_list)
                 cd(handles(g).path)
                 mkdir(handles(g).rat_list{r});
-                temp = [handles(g).path '\' handles(g).rat_list{r} '\'];
-                cd(temp)              
-                temp2 = [datapath '\' handles(g).rat_list{r}];
-                copyfile(temp2,temp);
+%                 temp = [handles(g).path '\' handles(g).rat_list{r} '\'];
+%                 cd(temp)              
+%                 temp2 = [datapath '\' handles(g).rat_list{r}];
+%                 copyfile(temp2,temp);
                 temp3 = ['Number of sessions per week over ' num2str(Weeks) ' weeks for Animal ' handles(g).rat_list{r}];
                 dlg_title = 'Session per Week';
                 SessionsInfo(Counter) = inputdlg(temp3, dlg_title, [1 50]);
@@ -433,9 +456,9 @@ for d = 1:length(devices)                                                   %Ste
     obj = zeros(1,2);                                                       %Create a matrix to hold timescale uicontrol handles.
     str = {'Overall Hit Rate',...
         'Total Trial Count',...
-%         'Mean Peak Force',...
-        'Median Peak Force',...
-        'Trial Count'};
+        'Trial Count',...
+        'Peak Velocity',...
+        'Latency to Hit'};
 %         'Hits in First 5 Minutes',...
 %         'Trials in First 5 Minutes',...
 %         'Max. Hits in Any 5 Minutes',...
@@ -519,6 +542,8 @@ for g = 1:length(TimelineData(index_selected).Groups);
         TimelineData(index_selected).Groups(g).data.HitRate(s) = {data(Loc).hitrate};
         TimelineData(index_selected).Groups(g).data.TotalTrialCount(s) = {data(Loc).numtrials};
         TimelineData(index_selected).Groups(g).data.Peak(s) = {data(Loc).peak};
+        TimelineData(index_selected).Groups(g).data.Peak_Velocity(s) = {data(Loc).peak_velocity};
+        TimelineData(index_selected).Groups(g).data.Latency(s) = {data(Loc).latency};
     end
     Counter = 1;
     for s = 1:length(TimelineData(index_selected).Groups(g).Subjects);
@@ -529,10 +554,14 @@ for g = 1:length(TimelineData(index_selected).Groups);
             temp_hitrate = cell2mat(TimelineData(index_selected).Groups(g).data.HitRate(s));
             temp_TrialCount = cell2mat(TimelineData(index_selected).Groups(g).data.TotalTrialCount(s));
             temp_Peak = cell2mat(TimelineData(index_selected).Groups(g).data.Peak(s));
+            temp_Peak_Velocity = cell2mat(TimelineData(index_selected).Groups(g).data.Peak_Velocity(s));
+            temp_Latency = cell2mat(TimelineData(index_selected).Groups(g).data.Latency(s));
             temp_meanhitrate(s,l) = nanmean(temp_hitrate((SessionCount(l)+1):SessionCount(l+1)));
             temp_MeanTrialCount(s,l) = nanmean(temp_TrialCount((SessionCount(l)+1):SessionCount(l+1)));
             temp_MeanPeak(s,l) = nanmean(temp_Peak((SessionCount(l)+1):SessionCount(l+1)));
             temp_MedianPeak(s,l) = nanmedian(temp_Peak((SessionCount(l)+1):SessionCount(l+1)));
+            temp_MeanPeakVelocity(s,l) = nanmean(temp_Peak_Velocity((SessionCount(l)+1):SessionCount(l+1)));
+            temp_MeanLatency(s,l) = nanmean(temp_Latency((SessionCount(l)+1):SessionCount(l+1)));
         end
     end
     if length(TimelineData(index_selected).Groups(g).Sessions) > 1;
@@ -540,11 +569,15 @@ for g = 1:length(TimelineData(index_selected).Groups);
         temp_MeanTrialCount = nanmean(temp_MeanTrialCount);
         temp_MeanPeak = nanmean(temp_MeanPeak);
         temp_MedianPeak = nanmedian(temp_MedianPeak);
+        temp_MeanPeakVelocity = nanmean(temp_MeanPeakVelocity);
+        temp_MeanLatency = nanmean(temp_MeanLatency);
     end
     TimelineData(index_selected).Groups(g).data.MeanHitRate = {temp_meanhitrate};
     TimelineData(index_selected).Groups(g).data.MeanTrialCount = {temp_MeanTrialCount};
     TimelineData(index_selected).Groups(g).data.MeanPeak = {temp_MeanPeak};
     TimelineData(index_selected).Groups(g).data.MedianPeak = {temp_MedianPeak};
+    TimelineData(index_selected).Groups(g).data.MeanPeakVelocity = {temp_MeanPeakVelocity};
+    TimelineData(index_selected).Groups(g).data.MeanLatency = {temp_MeanLatency};
 end
 
 TrialViewerData = data;
@@ -612,6 +645,28 @@ elseif strcmpi(str,'trial count')                               %If we're plotti
         gcf; plot(TrialCount(p,:), 'Color', colors(p));
         hold off;
         CSV_Data(p,:) = TrialCount(p,:);
+    end
+    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth);
+elseif strcmpi(str,'peak velocity');
+    ax = gcf; cla(ax);
+    for p = 1:length(TimelineData(index_selected).Groups)
+        PeakVelocity(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.MeanPeakVelocity);
+        GroupLegend(p) = TimelineData(index_selected).Groups(p).name;
+        hold on;
+        gcf; plot(PeakVelocity(p,:), 'Color', colors(p));
+        hold off;
+        CSV_Data(p,:) = PeakVelocity(p,:);
+    end
+    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth);
+elseif strcmpi(str,'latency to hit');
+    ax = gcf; cla(ax);
+    for p = 1:length(TimelineData(index_selected).Groups)
+        Latency(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.MeanLatency);
+        GroupLegend(p) = TimelineData(index_selected).Groups(p).name;
+        hold on;
+        gcf; plot(Latency(p,:), 'Color', colors(p));
+        hold off;
+        CSV_Data(p,:) = Latency(p,:);
     end
     legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth);
 end
@@ -696,7 +751,7 @@ else                                                                        %Oth
         end
     end
     for g = 1:length(TimelineData(index_selected).Groups)
-        fprintf(fid,'%s: Subjects,\t',TimelineData(index_selected).Groups(g).name{:});
+        fprintf(fid,'%s Subjects,\t',TimelineData(index_selected).Groups(g).name{:});
         for s = 1:length(TimelineData(index_selected).Groups(g).Subjects);
             if s == length(TimelineData(index_selected).Groups(g).Subjects);
                 fprintf(fid,'%s,\n',TimelineData(index_selected).Groups(g).Subjects{s});
