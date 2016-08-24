@@ -120,7 +120,7 @@ switch choice
         pos = get(0,'Screensize');                                                  %Grab the screensize.
         h = 2;                                                                      %Set the height of the figure.
         w = 15;                                                                     %Set the width of the figure.
-        fig = figure('numbertitle','off','name','Loading MotoTrak Files...',...
+        fig = figure('numbertitle','off','name','Loading and Processing MotoTrak Files...',...
             'units','centimeters','Position',[pos(3)/2-w/2, pos(4)/2-h/2, w, h],...
             'menubar','none','resize','off');                                       %Create a figure to show the progress of reading in the files.
         ax = axes('units','centimeters','position',[0.25,0.25,w-0.5,h/2-0.3],...
@@ -206,11 +206,16 @@ switch choice
                     else
                         signal = data(s).trial(t).signal(a) - data(s).trial(t).signal(1);    %Grab the raw signal for the trial.
                     end
-                    smooth_trial_signal = boxsmooth(signal);
-                    smooth_knob_velocity = boxsmooth(diff(smooth_trial_signal));                %Boxsmooth the velocity signal
-                    data(s).peak_velocity(t) = max(smooth_knob_velocity);
-                    knob_acceleration = boxsmooth(diff(smooth_knob_velocity));
-                    data(s).peak_acceleration(t) = max(knob_acceleration);
+                    %                     smooth_trial_signal = boxsmooth(signal);
+                    %                     smooth_knob_velocity = boxsmooth(diff(smooth_trial_signal));                %Boxsmooth the velocity signal
+                    %                     data(s).peak_velocity(t) = max(smooth_knob_velocity);
+                    GOLAY_smooth_trial_signal = sgolayfilt(signal,5,7);
+                    GOLAY_smooth_knob_velocity = sgolayfilt(diff(GOLAY_smooth_trial_signal),5,7);
+                    data(s).raw_peak_velocity(t) = max(diff(signal));
+                    data(s).sgolayfilter_PV(t) = max(GOLAY_smooth_knob_velocity);
+                    %                     data(s).raw_peak_velocity(t) = max(diff(smooth_trial_signal));
+                    %                     knob_acceleration = boxsmooth(diff(smooth_knob_velocity));
+                    %                     data(s).peak_acceleration(t) = max(knob_acceleration);
                     if (data(s).trial(t).outcome == 72)                                   %If it was a hit
                         hit_time = find(data(s).trial(t).signal >= ...                    %Calculate the hit time
                             data(s).trial(t).thresh,1);
@@ -219,9 +224,11 @@ switch choice
                         data(s).latency_to_hit(t) = NaN;                            %If trial resulted in a miss, then set latency to hit to NaN
                     end
                 end
-                data(s).peak_velocity = nanmean(data(s).peak_velocity);
-                data(s).peak_acceleration = nanmean(data(s).peak_acceleration);
+                %                 data(s).peak_velocity = nanmean(data(s).peak_velocity);
+                %                 data(s).peak_acceleration = nanmean(data(s).peak_acceleration);
                 data(s).latency_to_hit = nanmean(data(s).latency_to_hit);
+                data(s).raw_peak_velocity = nanmean(data(s).raw_peak_velocity);
+                data(s).peak_velocity = nanmean(data(s).sgolayfilter_PV);
             end
         end
         if ishandle(fig)                                                            %If the user hasn't closed the waitbar figure...
