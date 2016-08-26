@@ -52,11 +52,13 @@ for f = 1:length(files)                                                     %Ste
         if data.trial(t).num_turns == 0                                    %If a turn was initiated in the previous session, and not registered
             data.trial(t).num_turns = 1;                                   %in this session, then count it as 1
         end
-        smooth_trial_signal = boxsmooth(signal);
-        smooth_knob_velocity = boxsmooth(diff(smooth_trial_signal));                %Boxsmooth the velocity signal
-        data.trial(t).peak_velocity = max(smooth_knob_velocity);
-        knob_acceleration = boxsmooth(diff(smooth_knob_velocity));
-        data.trial(t).peak_acceleration = max(knob_acceleration);
+%         smooth_trial_signal = boxsmooth(signal);
+%         smooth_knob_velocity = boxsmooth(diff(smooth_trial_signal));                %Boxsmooth the velocity signal
+GOLAY_smooth_trial_signal = sgolayfilt(signal,5,7);
+GOLAY_smooth_knob_velocity = sgolayfilt(diff(GOLAY_smooth_trial_signal),5,7);
+        data.trial(t).peak_velocity = max(GOLAY_smooth_knob_velocity);
+%         knob_acceleration = boxsmooth(diff(smooth_knob_velocity));
+%         data.trial(t).peak_acceleration = max(knob_acceleration);
         if (data.trial(t).outcome == 72)                                   %If it was a hit
             hit_time = find(data.trial(t).signal >= ...                    %Calculate the hit time
                 data.trial(t).thresh,1);
@@ -71,7 +73,7 @@ for f = 1:length(files)                                                     %Ste
         total_threshold(1,t) = data.trial(t).thresh;
         total_latency_to_hit(1,t) = data.trial(t).latency_to_hit;
         total_peak_velocity(1,t) = data.trial(t).peak_velocity;
-        total_peak_acceleration(1,t) = data.trial(t).peak_acceleration;
+%         total_peak_acceleration(1,t) = data.trial(t).peak_acceleration;
         total_num_turns(1,t) = data.trial(t).num_turns;
         total_mean_turn_distance(1,t) = data.trial(t).mean_turn_distance;
         Latency_To_Hit(t,f) = data.trial(t).latency_to_hit;
@@ -83,7 +85,7 @@ for f = 1:length(files)                                                     %Ste
     Mean_Distance = nanmean(total_mean_distance);
     Latency = nanmean(total_latency_to_hit);
     Peak_Vel = nanmean(total_peak_velocity);
-    Peak_Accel = nanmean(total_peak_acceleration);
+%     Peak_Accel = nanmean(total_peak_acceleration);
     Turns = nanmean(total_num_turns);
     Mean_Turn_Distance = nanmean(total_mean_turn_distance);
     Max_Mean_TD = max(total_mean_turn_distance);
