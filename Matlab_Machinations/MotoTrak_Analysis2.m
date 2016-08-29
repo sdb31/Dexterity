@@ -10,7 +10,35 @@ else                                                                        %Oth
     else
         progpath = temp(1:find(temp == '\',1,'last'));                      %Pull the path out of the m-file name.
     end
-end 
+end
+
+datapath = 'C:\KnobAnalysis\ConfigFiles\';                                         %Set the primary local data path for saving data files.
+if ~exist(datapath,'dir')                                           %If the primary local data path doesn't already exist...
+    mkdir(datapath);                                                %Make the primary local data path.
+end
+
+cd(datapath);
+Info = dir(datapath);
+AnalysisNames = {Info.name}; AnalysisNames = AnalysisNames(3:end);
+if isempty(AnalysisNames) ==1;
+    AnalysisNames = {'No Analyses'};
+end
+%% Have the user select a previous analysis or start a new one
+set(0,'units','centimeters');                                               %Set the system units to centimeters.
+pos = get(0,'Screensize');                                                  %Grab the screensize.
+h = 7;                                                                      %Set the height of the figure.
+w = 6;                                                                     %Set the width of the figure.
+InitialScreen = figure('numbertitle','off','name','Analysis Selection',...
+    'units','centimeters','Position',[pos(3)/2-w/2, pos(4)/2-h/2, w, h],...
+    'menubar','none','resize','off');
+New_Analysis = uicontrol('Parent', InitialScreen,'style','pushbutton','string','New Analysis','HorizontalAlignment', 'left',...
+    'units','normalized','position',[.1 .85 .8 .1],'fontsize',10);
+Existing_Analysis = uicontrol('Parent', InitialScreen, 'style', 'listbox','HorizontalAlignment', 'left',...
+    'units','normalized','position',[.1 .05 .8 .75],'string',AnalysisNames);
+set(New_Analysis, 'callback', {@NewAnalysis,datapath,Existing_Analysis});
+set(Existing_Analysis, 'callback', {@ExistingAnalysis});
+
+function NewAnalysis(hObject,~,path,Existing_Analysis)
 %% Have the user choose a path containing data files to analyze.
 datapath = 'C:\Users\sab3005\Desktop\KnobAnalysisProject';                                                  %Set the expected primary local data path for saving data files.
 if ~exist(datapath,'dir')                                                   %If the primary local data path doesn't exist...
@@ -33,7 +61,7 @@ rats = files;                                                               %Cop
 % TrialViewerFiles = files;
 for r = 1:length(rats)                                                      %Step through each file.
     rats{r}(1:find(rats{r} == '\' | rats{r} == '/',1,'last')) = [];         %Kick out the path from the filename.
-%     TrialViewerFiles{r}(1:find(TrialViewerFiles{r} == '\' | TrialViewerFiles{r} == '/',1,'last')) = [];
+    %     TrialViewerFiles{r}(1:find(TrialViewerFiles{r} == '\' | TrialViewerFiles{r} == '/',1,'last')) = [];
     i = strfind(rats{r},'_20');                                             %Find the start of the timestamp.
     if isempty(i) || length(i) > 1                                          %If no timestamp was found in the filename, or multiple timestamps were found...
         rats{r} = [];                                                       %Set the rat name to empty brackets.
@@ -66,7 +94,7 @@ files(keepers == 0) = [];    %Kick out all files the user doesn't want to includ
 %     dispfiles(d).files = [];
 %     dispfiles(d).realfiles = [];
 % end
-% for q = 1:length(files)    
+% for q = 1:length(files)
 %     r = 1;
 %     t = strfind(files{q},rat_list{r});
 %     if length(t) == 1;
@@ -84,7 +112,7 @@ files(keepers == 0) = [];    %Kick out all files the user doesn't want to includ
 %     dispfiles(r).files{Count} = files{q}(t(1):end);
 %     dispfiles(r).realfiles{Count} = files{q};
 % end
-% 
+%
 % for d = 1:length(dispfiles)
 %     test = listdlg('PromptString', ['Which files would you like to include for Animal ' rat_list{d} '?'],...
 %         'name','File Selection',...
@@ -143,7 +171,7 @@ for f = 1:length(files)                                                     %Ste
         s = length(data) + 1;                                               %Create a new field index.
         for field = {'rat','device','stage'}                               %Step through the fields we want to save from the data file...
             data(s).(field{1}) = temp.(field{1});                           %Grab each field from the data file and save it.
-        end        
+        end
         if isfield(temp,'trial') == 0;
             KeepFile = questdlg(['There is no data in this file: ' files{f}(a+1:end)],...
                 'Keep or Discard File',...
@@ -157,7 +185,7 @@ for f = 1:length(files)                                                     %Ste
                     data(s).impulse = [];
                     data(s).timestamp = temp.daycode;
                 case 'Discard'
-                    date(s).timestamp = [];
+                    data(s).timestamp = [];
             end
         else
             data(s).outcome = char([temp.trial.outcome]');                      %Grab the outcome of each trial.
@@ -194,15 +222,15 @@ for f = 1:length(files)                                                     %Ste
             else
                 signal = data(s).trial(t).signal(a) - data(s).trial(t).signal(1);    %Grab the raw signal for the trial.
             end
-%             smooth_trial_signal = boxsmooth(signal);
-%             smooth_knob_velocity = boxsmooth(diff(smooth_trial_signal));                %Boxsmooth the velocity signal
+            %             smooth_trial_signal = boxsmooth(signal);
+            %             smooth_knob_velocity = boxsmooth(diff(smooth_trial_signal));                %Boxsmooth the velocity signal
             GOLAY_smooth_trial_signal = sgolayfilt(signal,5,7);
             GOLAY_smooth_knob_velocity = sgolayfilt(diff(GOLAY_smooth_trial_signal),5,7);
-%             data(s).peak_velocity(t) = max(smooth_knob_velocity);
+            %             data(s).peak_velocity(t) = max(smooth_knob_velocity);
             data(s).raw_peak_velocity(t) = max(diff(signal));
             data(s).sgolayfilter_PV(t) = max(GOLAY_smooth_knob_velocity);
-%             knob_acceleration = boxsmooth(diff(smooth_knob_velocity));
-%             data(s).peak_acceleration(t) = max(knob_acceleration);
+            %             knob_acceleration = boxsmooth(diff(smooth_knob_velocity));
+            %             data(s).peak_acceleration(t) = max(knob_acceleration);
             if (data(s).trial(t).outcome == 72)                                   %If it was a hit
                 hit_time = find(data(s).trial(t).signal >= ...                    %Calculate the hit time
                     data(s).trial(t).thresh,1);
@@ -211,8 +239,8 @@ for f = 1:length(files)                                                     %Ste
                 data(s).latency_to_hit(t) = NaN;                            %If trial resulted in a miss, then set latency to hit to NaN
             end
         end
-%         data(s).peak_velocity = nanmean(data(s).peak_velocity);
-%         data(s).peak_acceleration = nanmean(data(s).peak_acceleration);
+        %         data(s).peak_velocity = nanmean(data(s).peak_velocity);
+        %         data(s).peak_acceleration = nanmean(data(s).peak_acceleration);
         data(s).latency_to_hit = nanmean(data(s).latency_to_hit);
         data(s).raw_peak_velocity = nanmean(data(s).raw_peak_velocity);
         data(s).peak_velocity = nanmean(data(s).sgolayfilter_PV);
@@ -257,7 +285,7 @@ for d = 1:length(devices)                                                   %Ste
         plotdata(r).stage = cell(1,length(i));                              %Pre-allocate a cell array to hold the stage name for each session..
         plotdata(r).files = cell(1,length(i));
         plotdata(r).peak_velocity = nan(1,length(i));
-        plotdata(r).latency = nan(1,length(i));        
+        plotdata(r).latency = nan(1,length(i));
         for s = 1:length(i)                                                 %Step through each session.
             plotdata(r).peak(s) = mean(data(i(s)).peak);                    %Save the mean signal peak for each session.
             plotdata(r).impulse(s) = mean(data(i(s)).impulse);              %Save the mean signal impulse peak for each session.
@@ -314,12 +342,15 @@ for d = 1:length(devices)                                                   %Ste
     end
     for r = 1:length(plotdata);
         temp_hitrate = isnan(plotdata(r).hitrate);
-        temp_peak = isnan(plotdata(r).peak);        
+        temp_peak = isnan(plotdata(r).peak);
         if ~isempty(find(temp_hitrate == 1, 1)) == 1;
             plotdata(r).hitrate(temp_hitrate) = 0;
             plotdata(r).peak(temp_peak) = 0;
         end
     end
+    choice = questdlg('Do you want to save this analysis session?',...
+        'Save Analysis',...
+        'Yes', 'No', 'Cancel');
     pos = get(0,'Screensize');                                              %Grab the screensize.
     h = 5;                                                                 %Set the height of the figure, in centimeters.
     w = 15;                                                                 %Set the width of the figure, in centimeters.
@@ -348,18 +379,67 @@ for d = 1:length(devices)                                                   %Ste
         DevicesRuns(d) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', sprintf('Devices: %s', devices{d}), ...
             'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .05 .4 .1],...
             'Fontsize', 10, 'Fontweight', 'normal') ;
-%         Timeline(i) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', 'Timeline', ...
-%             'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .48 .4 .05],...
-%             'Fontsize', 10, 'Fontweight', 'bold') ;
         General_Analysis(i) = uicontrol('Parent', tab(i),'style','pushbutton','string','General Analysis','HorizontalAlignment', 'left',...
-            'units','normalized','position',[.7 .625 .25 .25],'fontsize',10, 'callback', {@GeneralAnalysis,devices(d)},'userdata',plotdata(i));    
-%         Lab_Analysis(i) = uicontrol('Parent', tab(i),'style','pushbutton','string','Lab Analysis','HorizontalAlignment', 'left',...
-%             'units','normalized','position',[.7 .125 .25 .25],'fontsize',10, 'callback', {@LabAnalysis,devices(d)},'userdata',plotdata(i));        
-%         hold on;
-%         ax = axes('Parent', tab(i), 'units','normalized','position',[.03 .3 .94 .1 ],'Visible', 'off'); 
-%         line([0, 1], [1, 1], 'Parent', ax, 'linewidth', 2, 'color', 'k')
-%         hold off;
+            'units','normalized','position',[.7 .625 .25 .25],'fontsize',10, 'callback', {@GeneralAnalysis,devices(d)},'userdata',plotdata(i));
     end
+    switch choice
+        case 'Yes'
+            config.data = plotdata; config.time = date;
+            c = clock; hour = num2str(c(4)); minute = num2str(c(5)); year = num2str(c(1));
+            month = num2str(c(2)); day = num2str(c(3));
+            SessionName = [month day year '_' hour minute '_Analysis']
+            filename = [path SessionName '.mat'];
+            config.name = SessionName; config.FinalDates = FinalDates;
+            save(filename, 'config');
+            cd(path); Info = dir(path); Names = {Info.name}; Names = Names(3:end);
+            set(Existing_Analysis,'string', Names);
+    end
+end
+
+function ExistingAnalysis(hObject,~)
+index_selected = get(hObject,'value');
+Analysis = get(hObject,'string'); Analysis = char(Analysis(index_selected));
+if strcmpi(Analysis,'No Analyses') == 1;
+    return
+end
+path = ['C:\KnobAnalysis\ConfigFiles\' Analysis];
+load(path);
+devices = unique({config.data.device});
+FinalDates = {config.FinalDates}; FinalDates = FinalDates{:};
+pos = get(0,'Screensize');                                              %Grab the screensize.
+h = 5;                                                                 %Set the height of the figure, in centimeters.
+w = 15;                                                                 %Set the width of the figure, in centimeters.
+for d = 1:length(devices)
+    fig = figure('numbertitle','off','units','centimeters',...
+        'name',['MotoTrak Analysis: ' devices{d}],'menubar','none',...
+        'position',[pos(3)/2-w/2, pos(4)/2-h/2, w, h]);
+    tgroup = uitabgroup('Parent', fig);
+    tabs = {config.data.rat};
+    plotdata = config.data;
+    
+    for i = 1:length(tabs);
+        tab(i) = uitab('Parent', tgroup, 'Title', sprintf('Animal %s', tabs{i}));
+        tabs_info(i,:) = get(tab(i));
+        laststages(i) = plotdata(i).stage(length(plotdata(i).stage));
+        numberofsessions(i) = length(plotdata(i).stage);
+        AnimalName(i) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', sprintf('Animal Name: %s', tabs{i}), ...
+            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .85 .4 .1],...
+            'Fontsize', 10, 'Fontweight', 'normal') ;
+        LastSessionRun(i) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', sprintf('Last Session Run: %s', laststages{i}), ...
+            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .65 .6 .1],...
+            'Fontsize', 10, 'Fontweight', 'normal') ;
+        LastDateRun(i) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', sprintf('Last Date Run: %s', FinalDates{i}), ...
+            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .45 .4 .1],...
+            'Fontsize', 10, 'Fontweight', 'normal') ;
+        NumberOfSessions(i) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', sprintf('Number of Sessions: %d', numberofsessions(i)), ...
+            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .25 .4 .1],...
+            'Fontsize', 10, 'Fontweight', 'normal') ;
+        DevicesRuns(d) = uicontrol('Parent', tab(i), 'Style', 'text', 'String', sprintf('Devices: %s', devices{d}), ...
+            'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.05 .05 .4 .1],...
+            'Fontsize', 10, 'Fontweight', 'normal') ;
+        General_Analysis(i) = uicontrol('Parent', tab(i),'style','pushbutton','string','General Analysis','HorizontalAlignment', 'left',...
+            'units','normalized','position',[.7 .625 .25 .25],'fontsize',10, 'callback', {@GeneralAnalysis,devices(d)},'userdata',plotdata(i));
+   end
 end
 
 %% This function is called when the user selects the General Analysis Pushbutton
@@ -416,33 +496,6 @@ for d = 1:length(devices)                                                   %Ste
     Plot_Timeline(obj(2),[],obj,[],data);                                        %Call the function to plot the session data in the figure.
     set(fig,'ResizeFcn',{@Resize,ax,obj});
 end
-
-%% This function is called when the user selects the Lab Analysis Pushbutton
-% function LabAnalysis(hObject,~,devices)
-% data = hObject.UserData;
-% Table = readtable('LabSpecificAnalysisConfig.txt');
-% Path = Table{:,2};
-% pos = get(0,'Screensize');                                              %Grab the screensize.
-% h = 8;                                                                 %Set the height of the figure, in centimeters.
-% w = 15;                                                                 %Set the width of the figure, in centimeters.
-% FileNames = {};
-% for d = 1:length(devices)
-%     fig = figure('numbertitle','off','units','centimeters',...
-%         'name',['Lab Specific Analysis: ' devices{d}],'menubar','none',...
-%         'position',[pos(3)/2-w/2, pos(4)/2-h/2, w, h]);
-%     Choose_Lab = uicontrol('Parent', fig, 'Style', 'text', 'String', 'Please choose a lab:', ...
-%         'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.1 .85 .3 .05],...
-%         'Fontsize', 12, 'Fontweight', 'bold') ;
-%     Analysis_Type = uicontrol('Parent', fig, 'Style', 'listbox', 'HorizontalAlignment', 'left',...
-%         'callback', {@AnalysisType,devices},'userdata',data,'string',FileNames,...
-%         'units', 'normalized', 'Position', [.525 .1 .45 .7]);
-%     Lab_Name = uicontrol('Parent', fig, 'Style', 'listbox', 'HorizontalAlignment', 'left','string', Table{:,1},...
-%         'units', 'normalized', 'Position', [.025 .1 .45 .7],'callback',{@LabName,devices,Path,Analysis_Type},'userdata',data,...
-%         'Fontsize', 12);
-%     Lab_Functions = uicontrol('Parent', fig, 'Style', 'text', 'String', 'Lab Functions', ...
-%         'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.65 .85 .3 .05],...
-%         'Fontsize', 12, 'Fontweight', 'bold') ;
-% end
 
 function LabName(hObject,~,devices,Path,Analysis_Type)
 data = hObject.UserData;
@@ -823,37 +876,6 @@ switch choice
         path = Files{i}(1:a);
         MotoTrak_Supination_Viewer_Edit(files,path)
 end
-
-%% This function finds peaks for the velocity and latency
-% function [pks, sig] = Knob_Peak_Finder(signal)
-% %This code finds and kicks out peaks that have a std dev between
-% %them less than 1
-% 
-% smoothed_signal = boxsmooth(signal);                                        %smooth out the trial signal
-% [pks, sig] = findpeaks(smoothed_signal, 'MINPEAKHEIGHT', 5, ...
-%     'MINPEAKDISTANCE', 10);                                            %Find local maximma
-% n = length(pks);
-% j = 1;
-% if n>1
-%     while j <= n-1
-%         if (abs(pks(j)-pks(j+1)) <= 5)                                 % if the diff between 2 peaks is less than or equal to 5
-%             start_sig = sig(j);
-%             end_sig = sig(j+1);
-%             
-%             signal_interest = smoothed_signal(start_sig:end_sig);
-%             deviation_signal = std(signal_interest);
-%             
-%             if deviation_signal < 1
-%                 pks(j+1) = [];
-%                 sig(j+1) = [];
-%                 j = j-1;
-%             end
-%             
-%         end
-%         n = length(pks);
-%         j = j+1;
-%     end
-% end
 
 %% This subfunction finds peaks in the signal, accounting for equality of contiguous samples.
 function [pks,i] = PeakFinder(signal,smoothsize,init)
