@@ -1,4 +1,0 @@
-ExperimentNames, Subjects
-KnobPellet, G I M P
-DelayedStim, A B C D
-Create New Experiment, 
