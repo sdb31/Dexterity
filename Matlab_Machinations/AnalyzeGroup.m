@@ -428,13 +428,7 @@ set(Experiment,'callback', {@ExperimentCallback,GUI_Subjects,GUI_GroupNames,Expe
 set(Plot, 'callback', {@PlotButton,Experiment,ExperimentNames});
 end
 
-% % function PlotButton(hObject,~,Experiment,ExperimentNames);
-% function SelectGroups(hObject,~)
-% uiwait(msgbox('Hello'));
-
-
-
-
+%% This function is called whenever the Plot button is selected
 function PlotButton(hObject,~, Experiment,ExperimentNames)
 index_selected = get(Experiment,'value');
 SelectedExperiment = ExperimentNames(index_selected);
@@ -1013,6 +1007,7 @@ function Set_Plot_Type(~,~,obj,data,Weeks,AnimalData,index_selected)
 % i = strcmpi(get(obj,'fontweight'),'bold');                                  %Find the pushbutton with the bold fontweight.
 Plot_Timeline(obj(1),[],obj,[],data,Weeks,AnimalData,index_selected);                                            %Call the subfunction to plot the data by the appropriate timeline.
 
+%% This function updates the GUI with Experiment Name, Subjects, and Event Data
 function ExperimentCallback(hObject,~,GUI_Subjects,GUI_GroupNames,ExperimentNames,Subjects,Groups,Events)
 index_selected = get(hObject,'value');
 SelectedExperiment = ExperimentNames{index_selected};

@@ -1,8 +1,8 @@
 function Knob_Analysis_Suite(varargin)
 set(0,'units','centimeters');
-pos = get(0,'screensize');   
+pos = get(0,'screensize');
 h = 0.3*pos(4);
-w = 4*h/3;  
+w = 4*h/3;
 
 handles.fig = figure('numbertitle','off',...
     'name','Knob Task Analysis Suite',...
@@ -13,7 +13,7 @@ handles.Subject_Timeline = uicontrol(handles.fig,'style','pushbutton',...
     'units','normalized',...
     'Position',[.2,.7,.6,.2],...
     'string','View Subject Timeline',...
-    'fontsize',12);      
+    'fontsize',12);
 handles.Analyze_Group_Data = uicontrol(handles.fig,'style','pushbutton',...
     'units','normalized',...
     'Position',[.2,.4,.6,.2],...
@@ -44,7 +44,6 @@ guidata(handles.fig,handles);
 end
 
 function LabAnalysis(hObject,~)
-% data = hObject.UserData;
 Table = readtable('LabSpecificAnalysisConfig.txt');
 Path = Table{:,2};
 pos = get(0,'Screensize');                                              %Grab the screensize.
@@ -67,7 +66,6 @@ Lab_Functions = uicontrol('Parent', fig, 'Style', 'text', 'String', 'Lab Functio
     'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.65 .85 .3 .05],...
     'Fontsize', 12, 'Fontweight', 'bold') ;
 
-% guidata(handles.fig,handles);
 end
 
 function LabName(hObject,~,Path,Analysis_Type)
@@ -79,8 +77,6 @@ list = dir(Path);
 FileNames = {list.name};
 FileNames = FileNames(3:end);
 set(Analysis_Type,'string',FileNames);
-% guidata(hObject,handles);
-% AnalysisType(hObject,[],devices,FileNames);
 end
 
 function AnalysisType(hObject,~)

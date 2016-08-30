@@ -38,6 +38,7 @@ Existing_Analysis = uicontrol('Parent', InitialScreen, 'style', 'listbox','Horiz
 set(New_Analysis, 'callback', {@NewAnalysis,datapath,Existing_Analysis});
 set(Existing_Analysis, 'callback', {@ExistingAnalysis});
 
+%% This function creates a new analysis session
 function NewAnalysis(hObject,~,path,Existing_Analysis)
 %% Have the user choose a path containing data files to analyze.
 datapath = 'C:\Users\sab3005\Desktop\KnobAnalysisProject';                                                  %Set the expected primary local data path for saving data files.
@@ -387,7 +388,7 @@ for d = 1:length(devices)                                                   %Ste
             config.data = plotdata; config.time = date;
             c = clock; hour = num2str(c(4)); minute = num2str(c(5)); year = num2str(c(1));
             month = num2str(c(2)); day = num2str(c(3));
-            SessionName = [month day year '_' hour minute '_Analysis']
+            SessionName = [month day year '_' hour minute '_Analysis'];
             filename = [path SessionName '.mat'];
             config.name = SessionName; config.FinalDates = FinalDates;
             save(filename, 'config');
@@ -396,6 +397,7 @@ for d = 1:length(devices)                                                   %Ste
     end
 end
 
+%% This function loads an existing analysis that the user has saved
 function ExistingAnalysis(hObject,~)
 index_selected = get(hObject,'value');
 Analysis = get(hObject,'string'); Analysis = char(Analysis(index_selected));
@@ -496,23 +498,6 @@ for d = 1:length(devices)                                                   %Ste
     Plot_Timeline(obj(2),[],obj,[],data);                                        %Call the function to plot the session data in the figure.
     set(fig,'ResizeFcn',{@Resize,ax,obj});
 end
-
-function LabName(hObject,~,devices,Path,Analysis_Type)
-data = hObject.UserData;
-index_selected = get(hObject,'value');
-Path = Path{index_selected};
-cd(Path);
-Path = char(Path);
-list = dir(Path);
-FileNames = {list.name};
-FileNames = FileNames(3:end);
-set(Analysis_Type,'string',FileNames);
-% guidata(hObject,handles);
-% AnalysisType(hObject,[],devices,FileNames);
-
-function AnalysisType(hObject,~,devices)
-uiwait(msgbox('Hello!'));
-index_selected = get(hObject,'value');
 
 %% This function is called when the user selects a plot type in the pop-up menu.
 function Set_Plot_Type(~,~,obj,data)
