@@ -26,20 +26,26 @@ end
 %% Have the user select a previous analysis or start a new one
 set(0,'units','centimeters');                                               %Set the system units to centimeters.
 pos = get(0,'Screensize');                                                  %Grab the screensize.
-h = 7;                                                                      %Set the height of the figure.
+h = 8;                                                                      %Set the height of the figure.
 w = 6;                                                                     %Set the width of the figure.
 InitialScreen = figure('numbertitle','off','name','Analysis Selection',...
     'units','centimeters','Position',[pos(3)/2-w/2, pos(4)/2-h/2, w, h],...
     'menubar','none','resize','off');
 New_Analysis = uicontrol('Parent', InitialScreen,'style','pushbutton','string','New Analysis','HorizontalAlignment', 'left',...
-    'units','normalized','position',[.1 .85 .8 .1],'fontsize',10);
+    'units','normalized','position',[.1 .86 .8 .1],'fontsize',10);
 Existing_Analysis = uicontrol('Parent', InitialScreen, 'style', 'listbox','HorizontalAlignment', 'left',...
-    'units','normalized','position',[.1 .05 .8 .75],'string',AnalysisNames);
-set(New_Analysis, 'callback', {@NewAnalysis,datapath,Existing_Analysis});
+    'units','normalized','position',[.1 .04 .8 .65],'string',AnalysisNames);
+All_Animals = uicontrol('Parent', InitialScreen, 'style', 'checkbox','HorizontalAlignment','left',...
+    'units','normalized','position',[.1 .79 .8 .05], 'string', 'Separate figure for all animals');
+Existing_Analysis_Text = uicontrol('Parent', InitialScreen, 'style', 'text', 'string', 'Past Analyses',...
+    'HorizontalAlignment','left','units','normalized','position',[.3 .7 .4 .05], 'Fontsize', 10,'Fontweight', 'bold');
+set(New_Analysis, 'callback', {@NewAnalysis,datapath,Existing_Analysis, All_Animals});
 set(Existing_Analysis, 'callback', {@ExistingAnalysis});
 
 %% This function creates a new analysis session
-function NewAnalysis(hObject,~,path,Existing_Analysis)
+function NewAnalysis(hObject,~,path,Existing_Analysis,All_Animals)
+All_Animals_Value = get(All_Animals,'value');
+
 %% Have the user choose a path containing data files to analyze.
 datapath = 'C:\Users\sab3005\Desktop\KnobAnalysisProject';                                                  %Set the expected primary local data path for saving data files.
 if ~exist(datapath,'dir')                                                   %If the primary local data path doesn't exist...
@@ -385,7 +391,7 @@ for d = 1:length(devices)                                                   %Ste
     end
     switch choice
         case 'Yes'
-            config.data = plotdata; config.time = date;
+            config.data = plotdata; config.all_animals_value = All_Animals_Value; config.time = date;
             c = clock; hour = num2str(c(4)); minute = num2str(c(5)); year = num2str(c(1));
             month = num2str(c(2)); day = num2str(c(3));
             SessionName = [month day year '_' hour minute '_Analysis'];
@@ -395,11 +401,71 @@ for d = 1:length(devices)                                                   %Ste
             cd(path); Info = dir(path); Names = {Info.name}; Names = Names(3:end);
             set(Existing_Analysis,'string', Names);
     end
+    if All_Animals_Value == 1;
+        if length(rat_list) == 1;
+            uiwait(msgbox('Only one animal is loaded so a separate figure with all animals will not be displayed',...
+                'Only One Animal Found'));
+        else
+            
+            data = plotdata;
+            pos = get(0,'Screensize');                                              %Grab the screensize.
+            h = 10;                                                                 %Set the height of the figure, in centimeters.
+            w = 15;                                                                 %Set the width of the figure, in centimeters.
+            for d = 1:length(devices)                                                   %Step through the devices.
+                fig = figure('numbertitle','off','units','centimeters',...
+                    'name',['MotoTrak Analysis: ' devices{d}],'menubar','none',...
+                    'position',[pos(3)/2-w/2, pos(4)/2-h/2, w, h]);                     %Create a figure.
+                ui_h = 0.07*h;                                                          %Set the heigh of the uicontrols.
+                fontsize = 0.6*28.34*ui_h;                                              %Set the fontsize for all uicontrols.
+                sp1 = 0.02*h;                                                           %Set the vertical spacing between axes and uicontrols.
+                sp2 = 0.01*w;                                                           %Set the horizontal spacing between axes and uicontrols.
+                pos = [7*sp2,3*sp1,w-8*sp2,h-ui_h-5*sp1];                               %Set the position of the axes.
+                ax = axes('units','centimeters','position',pos,'box','on',...
+                    'linewidth',2);                                                     %Create axes for showing the log events histogram.
+                obj = zeros(1,5);                                                       %Create a matrix to hold timescale uicontrol handles.
+                str = {'Overall Hit Rate',...
+                    'Total Trial Count',...
+                    'Mean Peak Force',...
+                    'Median Peak Force',...
+                    'Trial Count',...
+                    'Hits in First 5 Minutes',...
+                    'Trials in First 5 Minutes',...
+                    'Max. Hits in Any 5 Minutes',...
+                    'Max. Trials in Any 5 Minutes',...
+                    'Max. Hit Rate in Any 5 Minutes',...
+                    'Min. Inter-Trial Interval (Smoothed)',...
+                    'Mean Peak Impulse',...
+                    'Median Peak Impulse',...
+                    'Peak Velocity',...
+                    'Latency to Hit'};                                             %List the available plots for the pull data.
+                if any(strcmpi(devices{d},{'knob','lever'}))                            %If we're plotting knob data...
+                    str(2:3) = {'Mean Peak Angle','Median Peak Angle'};                 %Set the plots to show "angle" instead of "force".
+                elseif ~any(strcmpi(devices{d},{'knob','lever','pull'}))                %Otherwise, if this isn't pull, knob, or lever data...
+                    str(2:3) = {'Mean Signal Peak','Median Signal Peak'};               %Set the plots to show "signal" instead of "peak force".
+                end
+                pos = [sp2, h-sp1-ui_h, 2*(w-6*sp2)/6, ui_h];                           %Set the position for the pop-up menu.
+                obj(1) = uicontrol(fig,'style','popup','string',str,...
+                    'units','centimeters','position',pos,'fontsize',fontsize);      %Create pushbuttons for selecting the timescale.
+                str = {'Session','Daily','Weekly','Export'};                            %List the timescale labels.
+                for i = 2:5                                                             %Step through the 3 timescales.
+                    pos = [i*sp2+i*(w-6*sp2)/6, h-sp1-ui_h, (w-6*sp2)/6, ui_h];         %Set the position for each pushbutton.
+                    obj(i) = uicontrol(fig,'style','pushbutton','string',str{i-1},...
+                        'units','centimeters','position',pos,'fontsize',fontsize);      %Create pushbuttons for selecting the timescale.
+                end
+                set(obj(1),'callback',{@Set_Plot_Type,obj,data});                            %Set the callback for the pop-up menu.
+                set(obj(2:4),'callback',{@Plot_Timeline,obj,[],data});                       %Set the callback for the timescale buttons.
+                set(obj(5),'callback',{@Export_Data,ax,obj,data});                           %Set the callback for the export button.
+                set(fig,'userdata',data);                                           %Save the plot data to the figure's 'UserData' property.
+                Plot_Timeline(obj(2),[],obj,[],data);                                        %Call the function to plot the session data in the figure.
+                set(fig,'ResizeFcn',{@Resize,ax,obj});
+            end
+        end
+    end
 end
 
 %% This function loads an existing analysis that the user has saved
 function ExistingAnalysis(hObject,~)
-index_selected = get(hObject,'value');
+index_selected = get(hObject,'value'); 
 Analysis = get(hObject,'string'); Analysis = char(Analysis(index_selected));
 if strcmpi(Analysis,'No Analyses') == 1;
     return
@@ -408,6 +474,7 @@ path = ['C:\KnobAnalysis\ConfigFiles\' Analysis];
 load(path);
 devices = unique({config.data.device});
 FinalDates = {config.FinalDates}; FinalDates = FinalDates{:};
+All_Animals_Value = config.all_animals_value;
 pos = get(0,'Screensize');                                              %Grab the screensize.
 h = 5;                                                                 %Set the height of the figure, in centimeters.
 w = 15;                                                                 %Set the width of the figure, in centimeters.
@@ -441,7 +508,67 @@ for d = 1:length(devices)
             'Fontsize', 10, 'Fontweight', 'normal') ;
         General_Analysis(i) = uicontrol('Parent', tab(i),'style','pushbutton','string','General Analysis','HorizontalAlignment', 'left',...
             'units','normalized','position',[.7 .625 .25 .25],'fontsize',10, 'callback', {@GeneralAnalysis,devices(d)},'userdata',plotdata(i));
-   end
+    end
+   if All_Animals_Value == 1;
+        if length({config.data.rat}) == 1;
+            uiwait(msgbox('Only one animal is loaded so a separate figure with all animals will not be displayed',...
+                'Only One Animal Found'));
+        else
+            
+            data = plotdata;
+            pos = get(0,'Screensize');                                              %Grab the screensize.
+            h = 10;                                                                 %Set the height of the figure, in centimeters.
+            w = 15;                                                                 %Set the width of the figure, in centimeters.
+            for d = 1:length(devices)                                                   %Step through the devices.
+                fig = figure('numbertitle','off','units','centimeters',...
+                    'name',['MotoTrak Analysis: ' devices{d}],'menubar','none',...
+                    'position',[pos(3)/2-w/2, pos(4)/2-h/2, w, h]);                     %Create a figure.
+                ui_h = 0.07*h;                                                          %Set the heigh of the uicontrols.
+                fontsize = 0.6*28.34*ui_h;                                              %Set the fontsize for all uicontrols.
+                sp1 = 0.02*h;                                                           %Set the vertical spacing between axes and uicontrols.
+                sp2 = 0.01*w;                                                           %Set the horizontal spacing between axes and uicontrols.
+                pos = [7*sp2,3*sp1,w-8*sp2,h-ui_h-5*sp1];                               %Set the position of the axes.
+                ax = axes('units','centimeters','position',pos,'box','on',...
+                    'linewidth',2);                                                     %Create axes for showing the log events histogram.
+                obj = zeros(1,5);                                                       %Create a matrix to hold timescale uicontrol handles.
+                str = {'Overall Hit Rate',...
+                    'Total Trial Count',...
+                    'Mean Peak Force',...
+                    'Median Peak Force',...
+                    'Trial Count',...
+                    'Hits in First 5 Minutes',...
+                    'Trials in First 5 Minutes',...
+                    'Max. Hits in Any 5 Minutes',...
+                    'Max. Trials in Any 5 Minutes',...
+                    'Max. Hit Rate in Any 5 Minutes',...
+                    'Min. Inter-Trial Interval (Smoothed)',...
+                    'Mean Peak Impulse',...
+                    'Median Peak Impulse',...
+                    'Peak Velocity',...
+                    'Latency to Hit'};                                             %List the available plots for the pull data.
+                if any(strcmpi(devices{d},{'knob','lever'}))                            %If we're plotting knob data...
+                    str(2:3) = {'Mean Peak Angle','Median Peak Angle'};                 %Set the plots to show "angle" instead of "force".
+                elseif ~any(strcmpi(devices{d},{'knob','lever','pull'}))                %Otherwise, if this isn't pull, knob, or lever data...
+                    str(2:3) = {'Mean Signal Peak','Median Signal Peak'};               %Set the plots to show "signal" instead of "peak force".
+                end
+                pos = [sp2, h-sp1-ui_h, 2*(w-6*sp2)/6, ui_h];                           %Set the position for the pop-up menu.
+                obj(1) = uicontrol(fig,'style','popup','string',str,...
+                    'units','centimeters','position',pos,'fontsize',fontsize);      %Create pushbuttons for selecting the timescale.
+                str = {'Session','Daily','Weekly','Export'};                            %List the timescale labels.
+                for i = 2:5                                                             %Step through the 3 timescales.
+                    pos = [i*sp2+i*(w-6*sp2)/6, h-sp1-ui_h, (w-6*sp2)/6, ui_h];         %Set the position for each pushbutton.
+                    obj(i) = uicontrol(fig,'style','pushbutton','string',str{i-1},...
+                        'units','centimeters','position',pos,'fontsize',fontsize);      %Create pushbuttons for selecting the timescale.
+                end
+                set(obj(1),'callback',{@Set_Plot_Type,obj,data});                            %Set the callback for the pop-up menu.
+                set(obj(2:4),'callback',{@Plot_Timeline,obj,[],data});                       %Set the callback for the timescale buttons.
+                set(obj(5),'callback',{@Export_Data,ax,obj,data});                           %Set the callback for the export button.
+                set(fig,'userdata',data);                                           %Save the plot data to the figure's 'UserData' property.
+                Plot_Timeline(obj(2),[],obj,[],data);                                        %Call the function to plot the session data in the figure.
+                set(fig,'ResizeFcn',{@Resize,ax,obj});
+            end
+        end
+    end
 end
 
 %% This function is called when the user selects the General Analysis Pushbutton
