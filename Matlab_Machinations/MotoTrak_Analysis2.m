@@ -47,7 +47,7 @@ function NewAnalysis(hObject,~,path,Existing_Analysis,All_Animals)
 All_Animals_Value = get(All_Animals,'value');
 
 %% Have the user choose a path containing data files to analyze.
-datapath = 'C:\Users\sab3005\Desktop\KnobAnalysisProject';                                                  %Set the expected primary local data path for saving data files.
+datapath = 'C:\';                                                  %Set the expected primary local data path for saving data files.
 if ~exist(datapath,'dir')                                                   %If the primary local data path doesn't exist...
     datapath = pwd;                                                         %Set the default path to the current directory.
 end
