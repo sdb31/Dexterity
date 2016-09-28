@@ -82,8 +82,11 @@ if version < 0                                                              %If 
     data.manual_feeds = [];                                                 %Create a field in the data structure to hold manual feed times.
     while ~feof(fid)                                                        %Loop until the end of the file.
         trial = fread(fid,1,'uint32');                                      %Read in the trial number.
-        if isempty(trial)                                                   %If no trial number was read or that's the end of the file...
+        if isempty(trial)                                                    %If no trial number was read or that's the end of the file...
             starttime = fread(fid,1,'float64');
+            if isempty(starttime)
+                starttime = temp.datenum;
+            end
             continue                                                        %Skip execution of the rest of the loop.
         end
         starttime = fread(fid,1,'float64');                                 %Read in the trial start time.
