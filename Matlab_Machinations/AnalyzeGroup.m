@@ -494,20 +494,21 @@ for d = 1:length(devices)                                                   %Ste
     pos = [8*sp2,8*sp1,w-10*sp2,h-ui_h-10.5*sp1];                               %Set the position of the axes.
     ax = axes('units','centimeters','position',pos,'box','on',...
         'linewidth',2);                                                     %Create axes for showing the log events histogram.
-    obj = zeros(1,4);                                                       %Create a matrix to hold timescale uicontrol handles.
+    obj = zeros(1,5);                                                       %Create a matrix to hold timescale uicontrol handles.
     str = {'Overall Hit Rate',...
-        'Total Trial Count',...
+        'Dummy1',...
+        'Dummy2',...
         'Trial Count',...
         'Peak Velocity',...
         'Latency to Hit'};
-%         'Hits in First 5 Minutes',...
-%         'Trials in First 5 Minutes',...
-%         'Max. Hits in Any 5 Minutes',...
-%         'Max. Trials in Any 5 Minutes',...
-%         'Max. Hit Rate in Any 5 Minutes',...
-%         'Min. Inter-Trial Interval (Smoothed)',...
-%         'Mean Peak Impulse',...
-%         'Median Peak Impulse'};                                             %List the available plots for the pull data.
+    %         'Hits in First 5 Minutes',...
+    %         'Trials in First 5 Minutes',...
+    %         'Max. Hits in Any 5 Minutes',...
+    %         'Max. Trials in Any 5 Minutes',...
+    %         'Max. Hit Rate in Any 5 Minutes',...
+    %         'Min. Inter-Trial Interval (Smoothed)',...
+    %         'Mean Peak Impulse',...
+    %         'Median Peak Impulse'};                                             %List the available plots for the pull data.
     if any(strcmpi(devices{d},{'knob','lever'}))                            %If we're plotting knob data...
         str(2:3) = {'Mean Peak Angle','Median Peak Angle'};                 %Set the plots to show "angle" instead of "force".
     elseif ~any(strcmpi(devices{d},{'knob','lever','pull'}))                %Otherwise, if this isn't pull, knob, or lever data...
@@ -526,6 +527,9 @@ for d = 1:length(devices)                                                   %Ste
     pos = [35*sp2+(w-6*sp2)/6, .95*sp1, (w-6*sp2)/6, .9*ui_h]; 
     obj(4) = uicontrol(fig,'style','radiobutton','string','Bar Graph',...
         'units','centimeters','position',pos,'fontsize',.8*fontsize);
+    pos = [60*sp2+(w-6*sp2)/6, .95*sp1, (w-6*sp2)/6, .9*ui_h]; 
+    obj(5) = uicontrol(fig,'style','pushbutton','string','Add Sig Stars',...
+        'units','centimeters','position',pos,'fontsize',.8*fontsize);
 %     bg.Visible = 'on';
 %     str = {'Export'};                            %List the timescale labels.
 %     for i = 2:5                                                             %Step through the 3 timescales.
@@ -536,14 +540,29 @@ for d = 1:length(devices)                                                   %Ste
     set(obj(1),'callback',{@Set_Plot_Type,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue});                            %Set the callback for the pop-up menu.
 %     set(obj(2:4),'callback',{@Plot_Timeline,obj,[],data});                       %Set the callback for the timescale buttons.
     set(obj(2),'callback',{@Export_Data,ax,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue,obj(3)});                           %Set the callback for the export button.
-    set(obj(3),'callback',{@Linegraph,obj(4),obj,data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue},'Value',1);
-    set(obj(4),'callback',{@Bargraph,obj(3),obj,data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue});
+    set(obj(3),'callback',{@Linegraph,obj(4),obj,data,Weeks,AnimalData,index_selected,xlabels,EventData},'Value',1);
+    set(obj(4),'callback',{@Bargraph,obj(3),obj,data,Weeks,AnimalData,index_selected,xlabels,EventData});
+    set(obj(5),'callback',{@Sigstars});
     set(fig,'userdata',data);                                           %Save the plot data to the figure's 'UserData' property.
     Plot_Timeline(obj(2),[],obj,[],data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue);                                        %Call the function to plot the session data in the figure.
     set(fig,'ResizeFcn',{@Resize,ax,obj});
 end
 
-function Linegraph(hObject,~,BarUI,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue)
+function Sigstars(~,~)
+SigStarText = questdlg('How many sigstars would you like to use?',...
+    'Number of Sigstars',...
+    'One', 'Two', 'Three', 'Cancel');
+switch SigStarText
+    case 'One'
+        t = '*';
+    case 'Two'
+        t = '**';
+    case 'Three'
+        t = '***';
+end
+gtext(t,'HorizontalAlignment', 'center');
+
+function Linegraph(hObject,~,BarUI,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData)
 Line_value = get(hObject, 'value');
 Bar_value = get(BarUI, 'value');
 if Line_value == 1;
@@ -556,7 +575,7 @@ end
 Plotvalue = 'Line';
 Plot_Timeline(obj(2),[],obj,[],data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue);  
 
-function Bargraph(hObject,~,LineUI,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue)
+function Bargraph(hObject,~,LineUI,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData)
 Bar_value = get(hObject, 'value');
 Line_value = get(LineUI, 'value');
 if Bar_value == 1;
@@ -653,6 +672,20 @@ for g = 1:length(TimelineData(index_selected).Groups);
             temp_meanlatencystd(s,l) = nanstd(temp_Latency((SessionCount(l)+1):SessionCount(l+1)));
         end
     end
+    TimelineData(index_selected).Groups(g).data.PerAnimalHitRate = temp_meanhitrate;
+    TimelineData(index_selected).Groups(g).data.PerAnimalMeanTrialCount = temp_MeanTrialCount;
+    TimelineData(index_selected).Groups(g).data.PerAnimalMeanPeak = temp_MeanPeak;
+    TimelineData(index_selected).Groups(g).data.PerAnimalMedianPeak = temp_MedianPeak;
+    TimelineData(index_selected).Groups(g).data.PerAnimalMeanPeakVelocity = temp_MeanPeakVelocity;
+    TimelineData(index_selected).Groups(g).data.PerAnimalMeanLatency = temp_MeanLatency;
+%     PerAnimal(g).Hitrate = temp_meanhitrate;
+%     PerAnimal(g).MeanTrialCount = temp_MeanTrialCount;
+%     PerAnimal(g).MeanPeak = temp_MeanPeak;
+%     PerAnimal(g).MedianPeak = temp_MedianPeak;
+%     PerAnimal(g).MeanPeakVelocity = temp_MeanPeakVelocity;
+%     PerAnimal(g).MeanLatency = temp_MeanLatency;
+%     PerAnimal(g).Subjects = TimelineData.Groups(g).Subjects;
+    
     if length(TimelineData(index_selected).Groups(g).Sessions) > 1;
         temp_hitratestd = nanstd(temp_meanhitrate);
         temp_meanhitrate = nanmean(temp_meanhitrate);
@@ -716,7 +749,7 @@ if strcmpi(str,'overall hit rate')                              %If we're plotti
                 errorbar(HitRate(:,p), StandardDev(:,p)./sqrt(length(HitRate)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
         end
         hold off;
-        CSV_Data(:,p) = HitRate(:,p);
+        CSV_Data(:,p) = HitRate(:,p); GroupInfo(p).data = TimelineData(index_selected).Groups(p).data.PerAnimalHitRate;
     end
     switch Plotvalue
         case 'Bar'
@@ -853,7 +886,7 @@ elseif strcmpi(str,'trial count')                               %If we're plotti
             end
             hold off;
     end
-    YMax = 1.1*max(max(TrialCount)); YMax = round(YMax,-2);
+    YMax = 1.5*max(max(TrialCount)); YMax = round(YMax,-1);
     legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth,'YLim', [0 YMax],...
         'XLim', [.5 length(TrialCount)+.5],'XTickLabels', xlabels);
     yL = get(gca, 'YLim'); yLMax = max(yL);
@@ -933,7 +966,7 @@ elseif strcmpi(str,'latency to hit');
             end
             hold off;
     end
-    YMax = 1.1*max(max(Latency)); YMax = round(YMax,-1);
+    YMax = 1.4*max(max(Latency)); YMax = round(YMax,-1);
     legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth,'YLim', [0 YMax],...
         'XLim', [.5 length(Latency)+.5],'XTickLabels', xlabels);
     yL = get(gca, 'YLim'); yLMax = max(yL);
@@ -946,7 +979,7 @@ elseif strcmpi(str,'latency to hit');
     end
 end
 
-CSV_Data = CSV_Data';
+CSV_Data = CSV_Data'; 
 t = unique(horzcat(data.times));                                            %Horizontally concatenate all of the timestamps.
 t = unique(fix(t));                                                     %Find the unique truncated serial date numbers.
 t = [t; t + 1]';
@@ -1053,6 +1086,26 @@ else                                                                        %Oth
             end
         end
     end
+    fprintf(fid,'\n%s','Group Data');
+    for d = 1:length(TimelineData(index_selected).Groups);
+       fprintf(fid,'\n%s\n',TimelineData(index_selected).Groups(d).name{:});
+       for g = 1:length(TimelineData(index_selected).Groups(d).Subjects);
+           if g == length(TimelineData(index_selected).Groups(d).Subjects);
+               fprintf(fid,'%s,\n',TimelineData(index_selected).Groups(d).Subjects{g});
+           else
+               fprintf(fid,'%s,\t',TimelineData(index_selected).Groups(d).Subjects{g});
+           end
+       end
+       for i = 1:length(GroupInfo(d).data);
+           for g = 1:length(TimelineData(index_selected).Groups(d).Subjects);
+               if g == length(TimelineData(index_selected).Groups(d).Subjects);
+                   fprintf(fid,'%f,\n',GroupInfo(d).data(g,i));
+               else
+                   fprintf(fid,'%f,\t',GroupInfo(d).data(g,i));
+               end
+           end
+       end
+    end
 end
 
 %% This subfunction sorts the data into daily values and sends it to the plot function.
@@ -1149,6 +1202,8 @@ pos = [30*sp2, .95*sp1, (w-6*sp2)/6, .9*ui_h];
 set(obj(3),'units','centimeters','position',pos,'fontsize',.7*fontsize);
 pos = [35*sp2+(w-6*sp2)/6, .95*sp1, (w-6*sp2)/6, .9*ui_h];
 set(obj(4),'units','centimeters','position',pos,'fontsize',.7*fontsize);
+pos = [60*sp2+(w-6*sp2)/6, .95*sp1, (w-6*sp2)/6, .9*ui_h]; 
+set(obj(5),'units','centimeters','position',pos,'fontsize',.7*fontsize);
 linewidth = 0.1*h;                                                          %Set the linewidth for the plots.
 markersize = 0.75*h;                                                        %Set the marker size for the plots.
 fontsize = 0.6*h;                                                           %Set the fontsize for all text objects.
@@ -1178,16 +1233,16 @@ markersize = 0.75*h;                                                        %Set
 fontsize = 0.6*h;                                                           %Set the fontsize for all text objects.
 % cla(ax);                                                                    %Clear the axes.
 % colors = hsv(length(plotdata));                                             %Grab unique colors for all the rats.
-hoverdata = struct([]);                                                     %Create an empty structure to hold data for the MouseHover function.
+% hoverdata = struct([]);                                                     %Create an empty structure to hold data for the MouseHover function.
 % for r = 1:length(plotdata)                                                  %Step through each rat.
-%     line(mean(plotdata(r).x,2),plotdata(r).y,'color',colors(r,:),...
-%         'linewidth',linewidth,'userdata',1,'parent',ax);                    %Show the rat's performance as a thick line.
+% %     line(mean(plotdata(r).x,2),plotdata(r).y,'color',colors(r,:),...
+% %         'linewidth',linewidth,'userdata',1,'parent',ax);                    %Show the rat's performance as a thick line.
 %     for i = 1:size(plotdata(r).x,1)                                         %Step through each timepoint.
-%         l = line(mean(plotdata(r).x(i,:)),plotdata(r).y(i),...
-%             'markeredgecolor',colors(r,:),'linestyle','none',...
-%             'markerfacecolor',colors(r,:),'marker','.',...
-%             'linewidth',linewidth,'markersize',markersize,'userdata',2,...
-%             'parent',ax);                                                   %Mark each session with a unique marker.        
+% %         l = line(mean(plotdata(r).x(i,:)),plotdata(r).y(i),...
+% %             'markeredgecolor',colors(r,:),'linestyle','none',...
+% %             'markerfacecolor',colors(r,:),'marker','.',...
+% %             'linewidth',linewidth,'markersize',markersize,'userdata',2,...
+% %             'parent',ax);                                                   %Mark each session with a unique marker.        
 %         hoverdata(end+1).xy = [mean(plotdata(r).x(i,:)),plotdata(r).y(i)];  %Save the x- and y-coordinates.
 %         if rem(plotdata(r).x(i,1),1) ~= 0                                   %If the timestamp is a fractional number of days...
 %             temp = datestr(plotdata(r).x(i,1),'mm/dd/yyyy, HH:MM');         %Show the date and the time.
@@ -1199,7 +1254,7 @@ hoverdata = struct([]);                                                     %Cre
 %         end
 %         hoverdata(end).txt = {plotdata(r).rat,plotdata(r).s{i},...
 %             temp,plotdata(r).n{i}};                                         %Save the rat's name, stage, date, and hit rate/num trials.
-%         hoverdata(end).handles = l;                                         %Save the line handle for the point.
+% %         hoverdata(end).handles = l;                                         %Save the line handle for the point.
 %     end
 % end
 % temp = vertcat(hoverdata.xy);                                               %Grab all of the datapoint coordinates.
@@ -1211,7 +1266,7 @@ hoverdata = struct([]);                                                     %Cre
 % if x(1) == x(2)                                                             %If the x-axis limits are the same...
 %     x = x + [-1,1];                                                         %Add a day to each side of the single point.
 % end
-% xlim(ax,x);                                                                 %Set the x-axis limits.
+% % xlim(ax,x);                                                                 %Set the x-axis limits.
 % y = [min(temp(:,2)), max(temp(:,2))];                                       %Find the minimim and maximum x-values.
 % y = y + [-0.05,0.05]*(y(2) - y(1));                                         %Add some padding to the y-axis limits.
 % if length(y) < 2 || any(isnan(y))                                           %If there are any missing y values.
@@ -1282,12 +1337,12 @@ if xy(1) >= a(1) && xy(1) <= a(2) && xy(2) >= a(3) && xy(2) <= a(4)         %If 
         str = get(txt,'string');                                            %Grab the rat's name.
         if ~isequal(xy,temp) || ~strcmpi(str,data(i).txt)                   %If the current label is incorrect...
             set(txt,'position',xy,'string',data(i).txt,'visible','on');     %Update the position, string, and visibility of the text object.
-            set(data(i).handles,'markersize',2*markersize);                 %Make the selected marker larger.
+%             set(data(i).handles,'markersize',2*markersize);                 %Make the selected marker larger.
             set(setdiff([data.handles],data(i).handles),...
                 'markersize',markersize);                                   %Make the other markers smaller.
         end
     else                                                                    %Otherwise...
-        set([data.handles],'markersize',markersize);                        %Make all markers smaller.
+%         set([data.handles],'markersize',markersize);                        %Make all markers smaller.
         set(txt,'visible','off');                                           %Make the text object invisible.
     end
 end
