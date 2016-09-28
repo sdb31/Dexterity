@@ -80,20 +80,31 @@ switch choice
         end
         for q = 1:length(files)
             r = 1;
-            t = strfind(files{q},rat_list{r});
-            if length(t) == 1;
-                t = [];
-            end
+            temp = [char(rat_list(r)) '_'];
+            t = strfind(files{q},temp);
+            %             if length(t) == 1;
+            %                 t = [];
+            %             end
             while isempty(t) == 1;
                 r = r + 1;
-                t = strfind(files{q},rat_list{r});
-                if length(t) == 1;
-                    t = [];
-                end
+                temp = [char(rat_list(r)) '_'];
+                t = strfind(files{q},temp);
+                %                 if length(t) == 1;
+                %                     t = [];
+                %                 end
+            end
+            if length(t) > 2
+                temp = length(t) - 1;
+                t = t(temp);
+            elseif length(t) == 2
+                temp = 2;
+                t = t(temp);
+            else
+                t = t(1);
             end
             Count = length(dispfiles(r).files);
             Count = Count + 1;
-            dispfiles(r).files{Count} = files{q}(t(1):end);
+            dispfiles(r).files{Count} = files{q}(t:end);
             dispfiles(r).realfiles{Count} = files{q};
         end
         
@@ -149,7 +160,7 @@ switch choice
                 warning(['ERROR READING: ' files{f}]);                              %Show which file had a read problem...
                 warning(err.message);                                               %Show the actual error message.
             end
-            %             if %isfield(temp,'trial') && length(temp.trial) >= 5 && ...
+            %     if isfield(temp,'trial') && length(temp.trial) >= 5 && ...
             if any(strcmpi(rat_list,temp.rat))                                 %If there were at least 5 trials...
                 s = length(data) + 1;                                               %Create a new field index.
                 for field = {'rat','device','stage'}                               %Step through the fields we want to save from the data file...
@@ -161,14 +172,17 @@ switch choice
                         'Keep', 'Discard', 'Discard');
                     switch KeepFile
                         case 'Keep'
-                            data(s).outcome = [];
-                            data(s).thresh = [];
-                            data(s).starttime = [];
-                            data(s).peak = [];
-                            data(s).impulse = [];
+                            data(s).outcome = NaN;
+                            data(s).thresh = NaN;
+                            data(s).starttime = NaN;
+                            data(s).peak = NaN;
+                            data(s).impulse = NaN;
+                            data(s).latency_to_hit = NaN;
+                            data(s).raw_peak_velocity = NaN;
+                            data(s).peak_velocity = NaN;
                             data(s).timestamp = temp.daycode;
                         case 'Discard'
-                            date(s).timestamp = [];
+                            data(s) = [];
                     end
                 else
                     data(s).outcome = char([temp.trial.outcome]');                      %Grab the outcome of each trial.
@@ -188,47 +202,51 @@ switch choice
                     data(s).threshtype = temp.threshtype;
                     data(s).files = files{f};
                     data(s).filenames = files{f}(a+1:end);
-                end
-                for t = 1:length(data(s).trial)                                            %Step through each trial.
-                    a = find((data(s).trial(t).sample_times < 1000*data(s).trial(t).hitwin));       %Find all samples within the hit window.
-                    if strcmpi(data(s).threshtype,'degrees (bidirectional)')               %If the threshold type is bidirectional knob-turning...
-                        signal = abs(data(s).trial(t).signal(a) - ....
-                            data(s).trial(t).signal(1));                                   %Subtract the starting degrees value from the trial signal.
-                    elseif strcmpi(data(s).threshtype,'# of spins')                        %If the threshold type is the number of spins...
-                        temp = diff(data(s).trial(t).signal);                              %Find the velocity profile for this trial.
-                        temp = boxsmooth(temp,10);                                      %Boxsmooth the wheel velocity with a 100 ms smooth.
-                        [pks,i] = PeakFinder(temp,10);                                  %Find all peaks in the trial signal at least 100 ms apart.
-                        i(pks < 1) = [];                                                %Kick out all peaks that are less than 1 degree/sample.
-                        i = intersect(a,i+1)-1;                                         %Find all peaks that are in the hit window.
-                        signal = length(i);                                             %Set the trial signal to the number of wheel spins.
-                    elseif strcmpi(data(s).threshtype, 'degrees (total)')
-                        signal = data(s).trial(t).signal(a);
-                    else
-                        signal = data(s).trial(t).signal(a) - data(s).trial(t).signal(1);    %Grab the raw signal for the trial.
+                    %         end
+                    data(s).files = files{f};
+                    for t = 1:length(data(s).trial)                                            %Step through each trial.
+                        a = find((data(s).trial(t).sample_times < 1000*data(s).trial(t).hitwin));       %Find all samples within the hit window.
+                        if strcmpi(data(s).threshtype,'degrees (bidirectional)')               %If the threshold type is bidirectional knob-turning...
+                            signal = abs(data(s).trial(t).signal(a) - ....
+                                data(s).trial(t).signal(1));                                   %Subtract the starting degrees value from the trial signal.
+                        elseif strcmpi(data(s).threshtype,'# of spins')                        %If the threshold type is the number of spins...
+                            temp = diff(data(s).trial(t).signal);                              %Find the velocity profile for this trial.
+                            temp = boxsmooth(temp,10);                                      %Boxsmooth the wheel velocity with a 100 ms smooth.
+                            [pks,i] = PeakFinder(temp,10);                                  %Find all peaks in the trial signal at least 100 ms apart.
+                            i(pks < 1) = [];                                                %Kick out all peaks that are less than 1 degree/sample.
+                            i = intersect(a,i+1)-1;                                         %Find all peaks that are in the hit window.
+                            signal = length(i);                                             %Set the trial signal to the number of wheel spins.
+                        elseif strcmpi(data(s).threshtype, 'degrees (total)')
+                            signal = data(s).trial(t).signal(a);
+                        else
+                            signal = data(s).trial(t).signal(a) - data(s).trial(t).signal(1);    %Grab the raw signal for the trial.
+                        end
+                        %             smooth_trial_signal = boxsmooth(signal);
+                        %             smooth_knob_velocity = boxsmooth(diff(smooth_trial_signal));                %Boxsmooth the velocity signal
+                        GOLAY_smooth_trial_signal = sgolayfilt(signal,5,7);
+                        GOLAY_smooth_knob_velocity = sgolayfilt(diff(GOLAY_smooth_trial_signal),5,7);
+                        %             data(s).peak_velocity(t) = max(smooth_knob_velocity);
+                        data(s).raw_peak_velocity(t) = max(diff(signal));
+                        data(s).sgolayfilter_PV(t) = max(GOLAY_smooth_knob_velocity);
+                        %             knob_acceleration = boxsmooth(diff(smooth_knob_velocity));
+                        %             data(s).peak_acceleration(t) = max(knob_acceleration);
+                        if (data(s).trial(t).outcome == 72)                                   %If it was a hit
+                            hit_time = find(data(s).trial(t).signal >= ...                    %Calculate the hit time
+                                data(s).trial(t).thresh,1);
+                            if isempty(hit_time) == 1
+                                hit_time = 1;
+                            end
+                            data(s).latency_to_hit(t) = hit_time;                       %hit time is then latency to hit
+                        else
+                            data(s).latency_to_hit(t) = NaN;                            %If trial resulted in a miss, then set latency to hit to NaN
+                        end
                     end
-                    %                     smooth_trial_signal = boxsmooth(signal);
-                    %                     smooth_knob_velocity = boxsmooth(diff(smooth_trial_signal));                %Boxsmooth the velocity signal
-                    %                     data(s).peak_velocity(t) = max(smooth_knob_velocity);
-                    GOLAY_smooth_trial_signal = sgolayfilt(signal,5,7);
-                    GOLAY_smooth_knob_velocity = sgolayfilt(diff(GOLAY_smooth_trial_signal),5,7);
-                    data(s).raw_peak_velocity(t) = max(diff(signal));
-                    data(s).sgolayfilter_PV(t) = max(GOLAY_smooth_knob_velocity);
-                    %                     data(s).raw_peak_velocity(t) = max(diff(smooth_trial_signal));
-                    %                     knob_acceleration = boxsmooth(diff(smooth_knob_velocity));
-                    %                     data(s).peak_acceleration(t) = max(knob_acceleration);
-                    if (data(s).trial(t).outcome == 72)                                   %If it was a hit
-                        hit_time = find(data(s).trial(t).signal >= ...                    %Calculate the hit time
-                            data(s).trial(t).thresh,1);
-                        data(s).latency_to_hit(t) = hit_time;                       %hit time is then latency to hit
-                    else
-                        data(s).latency_to_hit(t) = NaN;                            %If trial resulted in a miss, then set latency to hit to NaN
-                    end
+                    %         data(s).peak_velocity = nanmean(data(s).peak_velocity);
+                    %         data(s).peak_acceleration = nanmean(data(s).peak_acceleration);
+                    data(s).latency_to_hit = nanmean(data(s).latency_to_hit);
+                    data(s).raw_peak_velocity = nanmean(data(s).raw_peak_velocity);
+                    data(s).peak_velocity = nanmean(data(s).sgolayfilter_PV);
                 end
-                %                 data(s).peak_velocity = nanmean(data(s).peak_velocity);
-                %                 data(s).peak_acceleration = nanmean(data(s).peak_acceleration);
-                data(s).latency_to_hit = nanmean(data(s).latency_to_hit);
-                data(s).raw_peak_velocity = nanmean(data(s).raw_peak_velocity);
-                data(s).peak_velocity = nanmean(data(s).sgolayfilter_PV);
             end
         end
         if ishandle(fig)                                                            %If the user hasn't closed the waitbar figure...
@@ -318,8 +336,10 @@ switch choice
                 plotdata(r).peak(temp_peak) = 0;
             end
         end
-        uiwait(msgbox('Great! Please assign subjects to each experimental group now.', 'Proceed to Subject Assignment'));        
-        Counter = 1;
+        uiwait(msgbox('Great! Please assign subjects to each experimental group now.', 'Proceed to Subject Assignment'));
+        %         Counter = 1;
+        AnimalName = cell(1,length(rat_list));
+        SessionsInfo = cell(1,length(rat_list));
         for g = 1:length(Groups);
             GG = listdlg('PromptString',['Group: ' Groups{g}],...
                 'name','Subject Assignment',...
@@ -327,7 +347,7 @@ switch choice
                 'listsize',[250 250],...
                 'initialvalue',1:length(rat_list),...
                 'uh',25,...
-                'ListString',rat_list);               
+                'ListString',rat_list);
             if isempty(g)                                                               %If the user clicked "cancel" or closed the dialog...
                 return                                                                  %Skip execution of the rest of the function.
             else                                                                        %Otherwise...
@@ -339,14 +359,15 @@ switch choice
             for r = 1:length(handles(g).rat_list)
                 cd(handles(g).path)
                 mkdir(handles(g).rat_list{r});
-%                 temp = [handles(g).path '\' handles(g).rat_list{r} '\'];
-%                 cd(temp)              
-%                 temp2 = [datapath '\' handles(g).rat_list{r}];
-%                 copyfile(temp2,temp);
+                temp = [handles(g).path '\' handles(g).rat_list{r} '\'];
+                cd(temp)
+                %                 temp2 = [datapath '\' handles(g).rat_list{r}];
+                %                 copyfile(temp2,temp);
                 temp3 = ['Number of sessions per week over ' num2str(Weeks) ' weeks for Animal ' handles(g).rat_list{r}];
                 dlg_title = 'Session per Week';
-                SessionsInfo(Counter) = inputdlg(temp3, dlg_title, [1 50]);
-                Counter = Counter + 1;
+                SessionsInfo(GG(r)) = inputdlg(temp3, dlg_title, [1 50]);
+                AnimalName(GG(r)) = handles(g).rat_list(r);
+                %                 Counter = Counter + 1;
             end
         end
         FilePath = ['C:\AnalyzeGroup\' ExperimentInfo{1}];
@@ -355,12 +376,23 @@ switch choice
         FilePath = [FilePath '\ConfigFiles'];
         cd(FilePath);
         config.weeks = Weeks;
-        config.events = ExperimentInfo{3};
+        config.events = ExperimentInfo{3}; config.events = {config.events};
         config.devices = devices;
         config.plotdata = plotdata;
+        xlabels = inputdlg('What are your xlabels?','XLabels', [1 50]);
+        config.xlabels = strsplit(xlabels{:});
+        for i = 1:length(config.events);
+            event_location = listdlg('PromptString', ['Where does ' config.events{i} ' occur ?'],...
+                'name','Event Location',...
+                'SelectionMode','multiple',...
+                'listsize',[250 100],...
+                'initialvalue',1,...
+                'ListString',config.xlabels);
+            config.event_location(i) = event_location(i);
+        end
         for m = 1:length(rat_list);
-           config.animal(m).name = rat_list{m};
-           config.animal(m).sessions = SessionsInfo{m};
+            config.animal(m).name = AnimalName{m};
+            config.animal(m).sessions = SessionsInfo{m};
         end
         filename = [ExperimentInfo{1} 'Config.mat'];
         save(filename, 'config');
@@ -408,9 +440,14 @@ Subjects_Text = uicontrol('Parent', fig, 'Style', 'text', 'String', 'Subjects:',
     'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.0475 .77 .3 .05],...
     'Fontsize', 12, 'Fontweight', 'bold') ;
 Groups = uicontrol('Parent', fig, 'Style', 'listbox', 'HorizontalAlignment', 'left',...
-    'string','Groups', 'units', 'normalized', 'Position', [.365 .05 .27 .7], 'Fontsize', 11);
+    'string','Groups', 'units', 'normalized', 'Position', [.365 .45 .27 .3], 'Fontsize', 11);
 Groups_Text = uicontrol('Parent', fig, 'Style', 'text', 'String', 'Groups:', ...
     'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.365 .77 .3 .05],...
+    'Fontsize', 12, 'Fontweight', 'bold') ;
+Labels = uicontrol('Parent', fig, 'Style', 'listbox', 'HorizontalAlignment', 'left',...
+    'string','Labels', 'units', 'normalized', 'Position', [.52375 .05 .27 .3], 'Fontsize', 11);
+Labels_Text = uicontrol('Parent', fig, 'Style', 'text', 'String', 'XLabels:', ...
+    'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.52375 .37 .3 .05],...
     'Fontsize', 12, 'Fontweight', 'bold') ;
 Experiment = uicontrol(fig,'style','popup','string',ExperimentNames,...
         'units','normalized','position',[.15 .91 .25 .05],'fontsize',12);
@@ -418,13 +455,13 @@ Experiment_Text = uicontrol('Parent', fig, 'Style', 'text', 'String', 'Experimen
     'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.01 .9 .13 .05],...
     'Fontsize', 12, 'Fontweight', 'bold') ;
 Events = uicontrol('Parent', fig, 'Style', 'listbox', 'HorizontalAlignment', 'left',...
-    'string','Events', 'units', 'normalized', 'Position', [.6825 .05 .27 .7],'Fontsize', 11);
+    'string','Events', 'units', 'normalized', 'Position', [.6825 .45 .27 .3],'Fontsize', 11);
 Events_Text = uicontrol('Parent', fig, 'Style', 'text', 'String', 'Events:', ...
     'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.6825 .77 .3 .05],...
     'Fontsize', 12, 'Fontweight', 'bold') ;
 Plot = uicontrol('Parent', fig, 'Style', 'pushbutton', 'HorizontalAlignment', 'left',...
     'string','Plot', 'units', 'normalized', 'Position', [.82 .86 .15 .1], 'Fontsize', 12);
-set(Experiment,'callback', {@ExperimentCallback,GUI_Subjects,GUI_GroupNames,ExperimentNames,Subjects,Groups,Events});
+set(Experiment,'callback', {@ExperimentCallback,GUI_Subjects,GUI_GroupNames,ExperimentNames,Subjects,Groups,Events,Labels});
 set(Plot, 'callback', {@PlotButton,Experiment,ExperimentNames});
 end
 
@@ -440,6 +477,8 @@ devices = config.devices;
 data = config.plotdata;
 Weeks = config.weeks;
 AnimalData = config.animal;
+EventData.name = config.events; EventData.location = config.event_location;
+xlabels = config.xlabels;
 pos = get(0,'Screensize');                                              %Grab the screensize.
 h = 10;                                                                 %Set the height of the figure, in centimeters.
 w = 15;                                                                 %Set the width of the figure, in centimeters.
@@ -451,10 +490,10 @@ for d = 1:length(devices)                                                   %Ste
     fontsize = 0.6*28.34*ui_h;                                              %Set the fontsize for all uicontrols.
     sp1 = 0.02*h;                                                           %Set the vertical spacing between axes and uicontrols.
     sp2 = 0.01*w;                                                           %Set the horizontal spacing between axes and uicontrols.
-    pos = [7*sp2,3*sp1,w-8*sp2,h-ui_h-5*sp1];                               %Set the position of the axes.
+    pos = [8*sp2,8*sp1,w-10*sp2,h-ui_h-10.5*sp1];                               %Set the position of the axes.
     ax = axes('units','centimeters','position',pos,'box','on',...
         'linewidth',2);                                                     %Create axes for showing the log events histogram.
-    obj = zeros(1,2);                                                       %Create a matrix to hold timescale uicontrol handles.
+    obj = zeros(1,4);                                                       %Create a matrix to hold timescale uicontrol handles.
     str = {'Overall Hit Rate',...
         'Total Trial Count',...
         'Trial Count',...
@@ -479,28 +518,54 @@ for d = 1:length(devices)                                                   %Ste
     pos = [5*sp2+5*(w-6*sp2)/6, h-sp1-ui_h, (w-6*sp2)/6, ui_h]; 
     obj(2) = uicontrol(fig,'style','pushbutton','string','Export',...
         'units','centimeters','position',pos,'fontsize',fontsize);
+    pos = [30*sp2, .95*sp1, (w-6*sp2)/6, .9*ui_h]; 
+%     bg = uibuttongroup(fig,'Position',pos,'SelectionChangedFcn',@graphselection);
+    obj(3) = uicontrol(fig,'style','radiobutton','string','Line Graph',...
+        'units','centimeters','position',pos,'fontsize',.8*fontsize);
+    pos = [35*sp2+(w-6*sp2)/6, .95*sp1, (w-6*sp2)/6, .9*ui_h]; 
+    obj(4) = uicontrol(fig,'style','radiobutton','string','Bar Graph',...
+        'units','centimeters','position',pos,'fontsize',.8*fontsize);
+%     bg.Visible = 'on';
 %     str = {'Export'};                            %List the timescale labels.
 %     for i = 2:5                                                             %Step through the 3 timescales.
 %         pos = [i*sp2+i*(w-6*sp2)/6, h-sp1-ui_h, (w-6*sp2)/6, ui_h];         %Set the position for each pushbutton.
 %         obj(i) = uicontrol(fig,'style','pushbutton','string',str{i-1},...
 %             'units','centimeters','position',pos,'fontsize',fontsize);      %Create pushbuttons for selecting the timescale.
 %     end
-    set(obj(1),'callback',{@Set_Plot_Type,obj,data,Weeks,AnimalData,index_selected});                            %Set the callback for the pop-up menu.
+    set(obj(1),'callback',{@Set_Plot_Type,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData});                            %Set the callback for the pop-up menu.
 %     set(obj(2:4),'callback',{@Plot_Timeline,obj,[],data});                       %Set the callback for the timescale buttons.
-    set(obj(2),'callback',{@Export_Data,ax,obj,data,Weeks,AnimalData,index_selected});                           %Set the callback for the export button.
+    set(obj(2),'callback',{@Export_Data,ax,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData});                           %Set the callback for the export button.
+    set(obj(3),'callback',{@Linegraph,obj(4)},'Value',1);
+    set(obj(4),'callback',{@Bargraph,obj(3)});
     set(fig,'userdata',data);                                           %Save the plot data to the figure's 'UserData' property.
-    Plot_Timeline(obj(2),[],obj,[],data,Weeks,AnimalData,index_selected);                                        %Call the function to plot the session data in the figure.
+    Plot_Timeline(obj(2),[],obj,[],data,Weeks,AnimalData,index_selected,xlabels,EventData);                                        %Call the function to plot the session data in the figure.
     set(fig,'ResizeFcn',{@Resize,ax,obj});
 end
 
+function Linegraph(hObject,~,BarUI)
+Line_value = get(hObject, 'value');
+if Line_value == 1;
+    set(BarUI, 'value', 0);
+else
+    set(BarUI, 'value', 1);
+end
+
+function Bargraph(hObject,~,LineUI)
+Bar_value = get(hObject, 'value');
+if Bar_value == 1;
+    set(LineUI, 'value', 0);
+else
+    set(LineUI, 'value', 1);
+end
+
 %% This subfunction sorts the data into single-session values and sends it to the plot function.
-function Plot_Timeline(hObject,~,obj,fid,data,Weeks,AnimalData,index_selected)
+function Plot_Timeline(hObject,~,obj,fid,data,Weeks,AnimalData,index_selected,xlabels,EventData)
 path = 'C:\AnalyzeGroup';
 cd(path);
 Info = dir(path);
 for q = 1:length(AnimalData);
     Sessions(q,:) = str2num(AnimalData(q).sessions);
-    Names(q) = AnimalData(q).name;
+    Names(q) = {AnimalData(q).name};
 end
 for l = 1:size(Sessions,1);
     for m = 1:size(Sessions,2);
@@ -529,9 +594,12 @@ for i = 1:length(ExperimentNames);
             %           GUI_Subjects{i,Counter} = [handles(k).SubjectNames{t} ' (' GroupNames{k} ')'];
             TimelineData(i).Groups(k).Subjects(t) = handles(k).SubjectNames(t);
             if i == index_selected;
-                Loc = find(Names == handles(k).SubjectNames{t});
-                TimelineData(i).Groups(k).Sessions(t,:) = {AnimalData(Loc).sessions};
-                TimelineData(i).Groups(k).SessionCount(t) = {SessionCount(Loc,:)};
+                for l = 1:length(Names);
+                    temp(l) = strcmpi(Names(l),handles(k).SubjectNames{t});
+                end
+%                 Loc = find(char(Names) == handles(k).SubjectNames{t});
+                TimelineData(i).Groups(k).Sessions(t,:) = {AnimalData(temp).sessions};
+                TimelineData(i).Groups(k).SessionCount(t) = {SessionCount(temp,:)};
             end
             %           Counter = Counter + 1;
         end
@@ -539,46 +607,67 @@ for i = 1:length(ExperimentNames);
 end
 for g = 1:length(TimelineData(index_selected).Groups);
     for s = 1:length(TimelineData(index_selected).Groups(g).Subjects);
-        Loc = Names == TimelineData(index_selected).Groups(g).Subjects{s};
-        TimelineData(index_selected).Groups(g).data.HitRate(s) = {data(Loc).hitrate};
-        TimelineData(index_selected).Groups(g).data.TotalTrialCount(s) = {data(Loc).numtrials};
-        TimelineData(index_selected).Groups(g).data.Peak(s) = {data(Loc).peak};
-        TimelineData(index_selected).Groups(g).data.Peak_Velocity(s) = {data(Loc).peak_velocity};
-        TimelineData(index_selected).Groups(g).data.Latency(s) = {data(Loc).latency};
+        for l = 1:length(Names);
+            temp(l) = strcmpi(Names(l),TimelineData(index_selected).Groups(g).Subjects{s});
+        end
+%         Loc = Names == TimelineData(index_selected).Groups(g).Subjects{s};
+        TimelineData(index_selected).Groups(g).data.HitRate(s) = {data(temp).hitrate};
+        TimelineData(index_selected).Groups(g).data.TotalTrialCount(s) = {data(temp).numtrials};
+        TimelineData(index_selected).Groups(g).data.Peak(s) = {data(temp).peak};
+        TimelineData(index_selected).Groups(g).data.Peak_Velocity(s) = {data(temp).peak_velocity};
+        TimelineData(index_selected).Groups(g).data.Latency(s) = {data(temp).latency};
     end
-    Counter = 1;
+%     Counter = 1;
     for s = 1:length(TimelineData(index_selected).Groups(g).Subjects);
         Sessions = cell2mat(TimelineData(index_selected).Groups(g).Sessions(s));
         Sessions = strsplit(Sessions);
         SessionCount = cell2mat(TimelineData(index_selected).Groups(g).SessionCount(s));
         for l = 1:length(Sessions);
-            temp_hitrate = cell2mat(TimelineData(index_selected).Groups(g).data.HitRate(s));
+            temp_hitrate = cell2mat(TimelineData(index_selected).Groups(g).data.HitRate(s));           
             temp_TrialCount = cell2mat(TimelineData(index_selected).Groups(g).data.TotalTrialCount(s));
             temp_Peak = cell2mat(TimelineData(index_selected).Groups(g).data.Peak(s));
             temp_Peak_Velocity = cell2mat(TimelineData(index_selected).Groups(g).data.Peak_Velocity(s));
             temp_Latency = cell2mat(TimelineData(index_selected).Groups(g).data.Latency(s));
             temp_meanhitrate(s,l) = nanmean(temp_hitrate((SessionCount(l)+1):SessionCount(l+1)));
+            temp_hitratestd(s,l) = nanstd(temp_hitrate((SessionCount(l)+1):SessionCount(l+1)));
             temp_MeanTrialCount(s,l) = nanmean(temp_TrialCount((SessionCount(l)+1):SessionCount(l+1)));
+            temp_meantrialcountstd(s,l) = nanstd(temp_TrialCount((SessionCount(l)+1):SessionCount(l+1)));
             temp_MeanPeak(s,l) = nanmean(temp_Peak((SessionCount(l)+1):SessionCount(l+1)));
+            temp_meanpeakstd(s,l) = nanstd(temp_Peak((SessionCount(l)+1):SessionCount(l+1)));
             temp_MedianPeak(s,l) = nanmedian(temp_Peak((SessionCount(l)+1):SessionCount(l+1)));
+            temp_medianpeakstd(s,l) = nanstd(temp_Peak((SessionCount(l)+1):SessionCount(l+1)));
             temp_MeanPeakVelocity(s,l) = nanmean(temp_Peak_Velocity((SessionCount(l)+1):SessionCount(l+1)));
+            temp_meanpeakvelocitystd(s,l) = nanstd(temp_Peak_Velocity((SessionCount(l)+1):SessionCount(l+1)));
             temp_MeanLatency(s,l) = nanmean(temp_Latency((SessionCount(l)+1):SessionCount(l+1)));
+            temp_meanlatencystd(s,l) = nanstd(temp_Latency((SessionCount(l)+1):SessionCount(l+1)));
         end
     end
     if length(TimelineData(index_selected).Groups(g).Sessions) > 1;
+        temp_hitratestd = nanstd(temp_meanhitrate);
         temp_meanhitrate = nanmean(temp_meanhitrate);
+        temp_meantrialcountstd = nanstd(temp_MeanTrialCount);
         temp_MeanTrialCount = nanmean(temp_MeanTrialCount);
+        temp_meanpeakstd = nanstd(temp_MeanPeak);
         temp_MeanPeak = nanmean(temp_MeanPeak);
+        temp_medianpeakstd = nanstd(temp_MedianPeak);
         temp_MedianPeak = nanmedian(temp_MedianPeak);
+        temp_meanpeakvelocitystd = nanstd(temp_MeanPeakVelocity);
         temp_MeanPeakVelocity = nanmean(temp_MeanPeakVelocity);
+        temp_meanlatencystd = nanstd(temp_MeanLatency);
         temp_MeanLatency = nanmean(temp_MeanLatency);
     end
     TimelineData(index_selected).Groups(g).data.MeanHitRate = {temp_meanhitrate};
+    TimelineData(index_selected).Groups(g).data.hitratestd = {temp_hitratestd};
     TimelineData(index_selected).Groups(g).data.MeanTrialCount = {temp_MeanTrialCount};
+    TimelineData(index_selected).Groups(g).data.meantrialcountstd = {temp_meantrialcountstd};
     TimelineData(index_selected).Groups(g).data.MeanPeak = {temp_MeanPeak};
+    TimelineData(index_selected).Groups(g).data.meanpeakstd = {temp_meanpeakstd};
     TimelineData(index_selected).Groups(g).data.MedianPeak = {temp_MedianPeak};
+    TimelineData(index_selected).Groups(g).data.medianpeakstd = {temp_medianpeakstd};
     TimelineData(index_selected).Groups(g).data.MeanPeakVelocity = {temp_MeanPeakVelocity};
+    TimelineData(index_selected).Groups(g).data.meanpeakvelocitystd = {temp_meanpeakvelocitystd};
     TimelineData(index_selected).Groups(g).data.MeanLatency = {temp_MeanLatency};
+    TimelineData(index_selected).Groups(g).data.meanlatencystd = {temp_meanlatencystd};
 end
 
 TrialViewerData = data;
@@ -596,7 +685,7 @@ ui_h = 0.07*h;                                                              %Set
 sp1 = 0.02*h;                                                               %Set the vertical spacing between axes and uicontrols.
 sp2 = 0.01*w;                                                               %Set the horizontal spacing between axes and uicontrols.
 % fontsize = 0.6*28.34*ui_h;   %Create a structure to hold plot data.
-linewidth = 0.1*h;                                                          %Set the linewidth for the plots.
+linewidth = .1*h;                                                          %Set the linewidth for the plots.
 markersize = 0.75*h;                                                        %Set the marker size for the plots.
 % fontsize = 0.6*h;  
 colors = 'kbrgy';
@@ -604,72 +693,136 @@ if strcmpi(str,'overall hit rate')                              %If we're plotti
     ax = gcf; cla(ax); %tempaxis = gca;
     for p = 1:length(TimelineData(index_selected).Groups)
         HitRate(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.MeanHitRate);
-        GroupLegend(p) = TimelineData(index_selected).Groups(p).name;
+        StandardDev(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.hitratestd);
+        GroupLegend(p) = TimelineData(index_selected).Groups(p).name;        
         hold on;
-        gcf; plot(HitRate(p,:), 'Color', colors(p));
+        gcf; %plot(HitRate(p,:), 'Color', colors(p),'Marker', 'o','MarkerFaceColor', colors(p));
+        errorbar(HitRate(p,:), StandardDev(p,:)./sqrt(length(HitRate)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
         hold off;
         CSV_Data(p,:) = HitRate(p,:);
     end
-    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth);
-%     tempaxis.YLim(1) = 0;
-%     set(gca,'Fontsize', 7);
+    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','YLim', [0 1],...
+        'XLim', [.5 length(HitRate)+.5],'XTickLabels', xlabels);
+    yL = get(gca, 'YLim'); yLMax = max(yL);
+    for q = 1:length(EventData);
+        hold on;
+        x = EventData(q).location - .5;
+        line([x x], yL, 'Color', 'r', 'Linestyle', '--');
+        text(x,.95*yLMax, ['\leftarrow' char(EventData(q).name)]);
+        hold off;
+    end
 elseif any(strcmpi(str,{'median peak force',...
         'median peak angle','median signal peak'}))             %If we're plotting the median signal peak...
     ax = gcf; cla(ax);
     for p = 1:length(TimelineData(index_selected).Groups)
         MedianPeak(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.MedianPeak);
+        StandardDev(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.medianpeakstd);
         GroupLegend(p) = TimelineData(index_selected).Groups(p).name;
         hold on;
-        gcf; plot(MedianPeak(p,:), 'Color', colors(p));
+        gcf; %plot(MedianPeak(p,:), 'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
+        errorbar(MedianPeak(p,:), StandardDev(p,:)./sqrt(length(MedianPeak)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
         hold off;
         CSV_Data(p,:) = MedianPeak(p,:);
     end
-    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth);
+    YMax = 1.1*max(max(MedianPeak)); YMax = round(YMax,-2); 
+    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth,'YLim', [0 YMax]);
+    yL = get(gca, 'YLim'); yLMax = max(yL);
+    for q = 1:length(EventData);
+        hold on;
+        x = EventData(q).location - .5;
+        line([x x], yL, 'Color', 'r', 'Linestyle', '--');
+        text(x,.95*yLMax, ['\leftarrow' char(EventData(q).name)]);
+        hold off;
+    end
 elseif any(strcmpi(str,{'mean peak force',...
         'mean peak angle','mean signal peak'}))                 %If we're plotting the mean signal peak...
-    ax = gcf; cla(ax);
+    ax = gcf; cla(ax); %ax = gca; cla(ax);
     for p = 1:length(TimelineData(index_selected).Groups)
         MeanPeak(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.MeanPeak);
-        GroupLegend(p) = TimelineData(index_selected).Groups(p).name;
+        StandardDev(p,:) = cell2mat(TimelineData(index_selected).Groups(g).data.meanpeakstd);
+        GroupLegend(p) = TimelineData(index_selected).Groups(p).name;       
         hold on;
-        gcf; plot(MeanPeak(p,:), 'Color', colors(p));
+        gcf; %plot(MeanPeak(p,:), 'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
+        errorbar(MeanPeak(p,:), StandardDev(p,:)./sqrt(length(MeanPeak)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
         hold off;
         CSV_Data(p,:) = MeanPeak(p,:);
     end
-    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth);
+    YMax = 1.1*max(max(MeanPeak)); YMax = round(YMax,-2);
+    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth,'YLim', [0 YMax]);
+    yL = get(gca, 'YLim'); yLMax = max(yL);
+    for q = 1:length(EventData);
+        hold on;
+        x = EventData(q).location - .5;
+        line([x x], yL, 'Color', 'r', 'Linestyle', '--');
+        text(x,.95*yLMax, ['\leftarrow' char(EventData(q).name)]);
+        hold off;
+    end
 elseif strcmpi(str,'trial count')                               %If we're plotting number of trials....
     ax = gcf; cla(ax);
     for p = 1:length(TimelineData(index_selected).Groups)
         TrialCount(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.MeanTrialCount);
+        StandardDev(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.meantrialcountstd);
         GroupLegend(p) = TimelineData(index_selected).Groups(p).name;
         hold on;
-        gcf; plot(TrialCount(p,:), 'Color', colors(p));
+        gcf; %plot(TrialCount(p,:), 'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
+        errorbar(TrialCount(p,:), StandardDev(p,:)./sqrt(length(TrialCount)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
         hold off;
         CSV_Data(p,:) = TrialCount(p,:);
     end
-    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth);
+    YMax = 1.1*max(max(TrialCount)); YMax = round(YMax,-2);
+    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth,'YLim', [0 YMax]);
+    yL = get(gca, 'YLim'); yLMax = max(yL);
+    for q = 1:length(EventData);
+        hold on;
+        x = EventData(q).location - .5;
+        line([x x], yL, 'Color', 'r', 'Linestyle', '--');
+        text(x,.95*yLMax, ['\leftarrow' char(EventData(q).name)]);
+        hold off;
+    end
 elseif strcmpi(str,'peak velocity');
     ax = gcf; cla(ax);
     for p = 1:length(TimelineData(index_selected).Groups)
         PeakVelocity(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.MeanPeakVelocity);
+        StandardDev(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.meanpeakvelocitystd);
         GroupLegend(p) = TimelineData(index_selected).Groups(p).name;
         hold on;
-        gcf; plot(PeakVelocity(p,:), 'Color', colors(p));
+        gcf; %plot(PeakVelocity(p,:), 'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
+        errorbar(PeakVelocity(p,:), StandardDev(p,:)./sqrt(length(PeakVelocity)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
         hold off;
         CSV_Data(p,:) = PeakVelocity(p,:);
     end
-    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth);
+    YMax = 1.1*max(max(PeakVelocity)); YMax = round(YMax);
+    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth,'YLim', [0 YMax]);
+    yL = get(gca, 'YLim'); yLMax = max(yL);
+    for q = 1:length(EventData);
+        hold on;
+        x = EventData(q).location - .5;
+        line([x x], yL, 'Color', 'r', 'Linestyle', '--');
+        text(x,.95*yLMax, ['\leftarrow' char(EventData(q).name)]);
+        hold off;
+    end
 elseif strcmpi(str,'latency to hit');
     ax = gcf; cla(ax);
     for p = 1:length(TimelineData(index_selected).Groups)
         Latency(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.MeanLatency);
+        StandardDev(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.meanlatencystd);
         GroupLegend(p) = TimelineData(index_selected).Groups(p).name;
         hold on;
-        gcf; plot(Latency(p,:), 'Color', colors(p));
+        gcf; %plot(Latency(p,:), 'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
+        errorbar(Latency(p,:), StandardDev(p,:)./sqrt(length(Latency)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
         hold off;
         CSV_Data(p,:) = Latency(p,:);
     end
-    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth);
+    YMax = 1.1*max(max(Latency)); YMax = round(YMax,-1);
+    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth,'YLim', [0 YMax]);
+    yL = get(gca, 'YLim'); yLMax = max(yL);
+    for q = 1:length(EventData);
+        hold on;
+        x = EventData(q).location - .5;
+        line([x x], yL, 'Color', 'r', 'Linestyle', '--');
+        text(x,.95*yLMax, ['\leftarrow' char(EventData(q).name)]);
+        hold off;
+    end
 end
 
 t = unique(horzcat(data.times));                                            %Horizontally concatenate all of the timestamps.
@@ -781,7 +934,7 @@ else                                                                        %Oth
 end
 
 %% This subfunction sorts the data into daily values and sends it to the plot function.
-function Export_Data(hObject,~,ax,obj,data,Weeks,AnimalData,index_selected)
+function Export_Data(hObject,~,ax,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData)
 output = questdlg(['Would you like to export the data as a spreadsheet '...
     'or figure image?'],'Data Type?','Spreadsheet','Image','Both','Both');  %Ask the user if they'd like to export the data as a spreadsheet or image.
 fig = get(hObject,'parent');                                                %Grab the parent figure of the export button.
@@ -801,7 +954,8 @@ if any(strcmpi({'image','both'},output))                                    %If 
     ui_h = 0.07*h;                                                          %Set the height of all uicontrols.
     sp1 = 0.02*h;                                                           %Set the vertical spacing between axes and uicontrols.
     sp2 = 0.01*w;                                                           %Set the horizontal spacing between axes and uicontrols.
-    pos = [7*sp2,3*sp1,w-8*sp2,h-4*sp1];                                    %Create an axes position matrix.
+%     pos = [7*sp2,3*sp1,w-8*sp2,h-4*sp1];                                    %Create an axes position matrix.
+    pos = [9*sp2,5*sp1,w-10*sp2,h-7*sp1];                                                          %Set the horizontal spacing between axes and uicontrols.
     set(ax,'units','centimeters','position',pos);                           %Expand the axes to fill the figure.
     set(obj,'visible','off');                                               %Make all of the other figures invisible.
     drawnow;                                                                %Immediately update the figure.    
@@ -814,11 +968,13 @@ if any(strcmpi({'image','both'},output))                                    %If 
     elseif strcmpi(ext,'.pdf')                                              %If the user chose to save as a PDF...
         print(fig,[path file(1:a-1)],'-dpdf');                              %Save the figure as a PDF file.
     end
-    pos = [7*sp2,3*sp1,w-8*sp2,h-ui_h-5*sp1];                               %Create an axes position matrix.
+%     pos = [7*sp2,3*sp1,w-8*sp2,h-ui_h-5*sp1];                               %Create an axes position matrix.
+    pos = [8*sp2,8*sp1,w-10*sp2,h-ui_h-10.5*sp1]; 
+    
     set(ax,'units','centimeters','position',pos);                           %Reset the position of the axes.
     set(obj,'visible','on');                                                %Make all of the other figures visible again.
 %     i = strcmpi(get(obj,'fontweight'),'bold');                              %Find the pushbutton with the bold fontweight.
-    Plot_Timeline(obj(2),[],obj,[],data,Weeks,AnimalData,index_selected);                                        %Call the subfunction to plot the data by the appropriate timeline.
+    Plot_Timeline(obj(2),[],obj,[],data,Weeks,AnimalData,index_selected,xlabels,EventData);                                        %Call the subfunction to plot the data by the appropriate timeline.
     set(fig,'color',temp,'ResizeFcn',{@Resize,ax,obj});                     %Set the Resize function for the figure.
     drawnow;                                                                %Immediately update the figure.    
 end
@@ -838,7 +994,7 @@ if any(strcmpi({'spreadsheet','both'},output))                              %If 
     end
     fid = fopen([path file],'wt');                                          %Open a new text file to write the data to.   
 %     i = strcmpi(get(obj,'fontweight'),'bold');                              %Find the pushbutton with the bold fontweight.
-    Plot_Timeline(obj(2),[],obj,fid,data,Weeks,AnimalData,index_selected);                                       %Call the subfunction to write the data by the appropriate timeline.
+    Plot_Timeline(obj(2),[],obj,fid,data,Weeks,AnimalData,index_selected,xlabels,EventData);                                       %Call the subfunction to write the data by the appropriate timeline.
     fclose(fid);                                                            %Close the figure.
     winopen([path file]);                                                   %Open the CSV file.
 end
@@ -853,13 +1009,18 @@ ui_h = 0.07*h;                                                              %Set
 sp1 = 0.02*h;                                                               %Set the vertical spacing between axes and uicontrols.
 sp2 = 0.01*w;                                                               %Set the horizontal spacing between axes and uicontrols.
 fontsize = 0.6*28.34*ui_h;                                                  %Set the fontsize for all uicontrols.
-pos = [7*sp2,3*sp1,w-8*sp2,h-ui_h-5*sp1];                                   %Create an axes position matrix.
+pos = [8*sp2,8*sp1,w-10*sp2,h-ui_h-10.5*sp1]; 
+    
+% pos = [7*sp2,3*sp1,w-8*sp2,h-ui_h-5*sp1];                                   %Create an axes position matrix.
 set(ax,'units','centimeters','position', pos);                              %Reset the position of the axes.
 pos = [sp2, h-sp1-ui_h, 2*(w-6*sp2)/6, ui_h];                               %Create the position matrix for the pop-up menu.
 set(obj(1),'units','centimeters','position',pos,'fontsize',fontsize);       %Set the position of the pop-up menu.
 pos = [5*sp2+5*(w-6*sp2)/6, h-sp1-ui_h, (w-6*sp2)/6, ui_h];
 set(obj(2),'units','centimeters','position',pos,'fontsize',fontsize);       %Set the position of the export button.
-
+pos = [30*sp2, .95*sp1, (w-6*sp2)/6, .9*ui_h];
+set(obj(3),'units','centimeters','position',pos,'fontsize',.7*fontsize);
+pos = [35*sp2+(w-6*sp2)/6, .95*sp1, (w-6*sp2)/6, .9*ui_h];
+set(obj(4),'units','centimeters','position',pos,'fontsize',.7*fontsize);
 linewidth = 0.1*h;                                                          %Set the linewidth for the plots.
 markersize = 0.75*h;                                                        %Set the marker size for the plots.
 fontsize = 0.6*h;                                                           %Set the fontsize for all text objects.
@@ -873,7 +1034,7 @@ set(obj(i),'markersize',markersize);                                        %Set
 i = strcmpi(get(obj,'type'),'line'); %& temp == 3;                            %Find all grid line objects.
 set(obj(i),'linewidth',0.5*linewidth);                                      %Set the linewidth for all grid line objects.
 i = strcmpi(get(obj,'type'),'text');                                        %Find all text objects.
-set(obj(i),'fontsize',fontsize);                                            %Set the font size for all text objects.
+set(obj(i),'fontsize',1.5*fontsize);                                            %Set the font size for all text objects.
 set(ax,'fontsize',fontsize,'linewidth',linewidth);                          %Set the axes linewidth and fontsize.
 temp = get(ax,'ylabel');                                                    %Grab the y-axis label handle for the axes.
 set(temp,'fontsize',1.1*fontsize);                                          %Set the font size for y-axis label.
@@ -884,7 +1045,7 @@ fig = get(ax,'parent');                                                     %Gra
 set(fig,'units','centimeters');                                             %Set the figure's units to centimeters.
 temp = get(fig,'position');                                                 %Grab the figure position.
 h = temp(4);                                                                %Grab the figure height, in centimeters.
-linewidth = 0.1*h;                                                          %Set the linewidth for the plots.
+linewidth = .1*h;                                                          %Set the linewidth for the plots.
 markersize = 0.75*h;                                                        %Set the marker size for the plots.
 fontsize = 0.6*h;                                                           %Set the fontsize for all text objects.
 % cla(ax);                                                                    %Clear the axes.
@@ -935,6 +1096,7 @@ hoverdata = struct([]);                                                     %Cre
 % set(ax,'xticklabel',datestr(get(ax,'xtick'),'mm/dd'),...
 %     'fontsize',fontsize,'fontweight','bold','linewidth',linewidth);         %Show the date for each x-axis tick.
 ylabel(ax,str,'fontweight','bold','fontsize',1.1*fontsize);                 %Label the x-axis.
+set(ax,'Linewidth', linewidth);
 % temp = get(ax,'ytick');                                                     %Grab the y-axis ticks.
 % for i = 1:length(temp)                                                      %Step through the y-axis ticks.
 %     temp(i) = line(xlim(ax),temp(i)*[1,1],'color',[0.75 0.75 0.75],...
@@ -1003,21 +1165,22 @@ if xy(1) >= a(1) && xy(1) <= a(2) && xy(2) >= a(3) && xy(2) <= a(4)         %If 
 end
 
 %% This function is called when the user selects a plot type in the pop-up menu.
-function Set_Plot_Type(~,~,obj,data,Weeks,AnimalData,index_selected)
+function Set_Plot_Type(~,~,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData)
 % i = strcmpi(get(obj,'fontweight'),'bold');                                  %Find the pushbutton with the bold fontweight.
-Plot_Timeline(obj(1),[],obj,[],data,Weeks,AnimalData,index_selected);                                            %Call the subfunction to plot the data by the appropriate timeline.
+Plot_Timeline(obj(1),[],obj,[],data,Weeks,AnimalData,index_selected,xlabels,EventData);                                            %Call the subfunction to plot the data by the appropriate timeline.
 
 %% This function updates the GUI with Experiment Name, Subjects, and Event Data
-function ExperimentCallback(hObject,~,GUI_Subjects,GUI_GroupNames,ExperimentNames,Subjects,Groups,Events)
+function ExperimentCallback(hObject,~,GUI_Subjects,GUI_GroupNames,ExperimentNames,Subjects,Groups,Events,Labels)
 index_selected = get(hObject,'value');
 SelectedExperiment = ExperimentNames{index_selected};
 temp = ['C:\AnalyzeGroup\' SelectedExperiment '\ConfigFiles'];
 cd(temp);
 temp = [SelectedExperiment 'Config.mat'];
 load(temp);
-EventNames = config.events; EventNames = strsplit(EventNames);
+EventNames = config.events; %EventNames = strsplit(EventNames);
 SubjectNames = GUI_Subjects(index_selected,:);
 GroupNames = GUI_GroupNames{index_selected};
 set(Subjects,'string',SubjectNames);
 set(Groups,'string',GroupNames);
 set(Events,'string',EventNames);
+set(Labels,'string',config.xlabels);
