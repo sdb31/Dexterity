@@ -482,6 +482,7 @@ xlabels = config.xlabels;
 pos = get(0,'Screensize');                                              %Grab the screensize.
 h = 10;                                                                 %Set the height of the figure, in centimeters.
 w = 15;                                                                 %Set the width of the figure, in centimeters.
+Plotvalue = 'Line';
 for d = 1:length(devices)                                                   %Step through the devices.
     fig = figure('numbertitle','off','units','centimeters',...
         'name',['MotoTrak Analysis: ' devices{d} ' Group Analysis'],'menubar','none',...
@@ -532,34 +533,44 @@ for d = 1:length(devices)                                                   %Ste
 %         obj(i) = uicontrol(fig,'style','pushbutton','string',str{i-1},...
 %             'units','centimeters','position',pos,'fontsize',fontsize);      %Create pushbuttons for selecting the timescale.
 %     end
-    set(obj(1),'callback',{@Set_Plot_Type,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData});                            %Set the callback for the pop-up menu.
+    set(obj(1),'callback',{@Set_Plot_Type,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue});                            %Set the callback for the pop-up menu.
 %     set(obj(2:4),'callback',{@Plot_Timeline,obj,[],data});                       %Set the callback for the timescale buttons.
-    set(obj(2),'callback',{@Export_Data,ax,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData});                           %Set the callback for the export button.
-    set(obj(3),'callback',{@Linegraph,obj(4)},'Value',1);
-    set(obj(4),'callback',{@Bargraph,obj(3)});
+    set(obj(2),'callback',{@Export_Data,ax,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue,obj(3)});                           %Set the callback for the export button.
+    set(obj(3),'callback',{@Linegraph,obj(4),obj,data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue},'Value',1);
+    set(obj(4),'callback',{@Bargraph,obj(3),obj,data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue});
     set(fig,'userdata',data);                                           %Save the plot data to the figure's 'UserData' property.
-    Plot_Timeline(obj(2),[],obj,[],data,Weeks,AnimalData,index_selected,xlabels,EventData);                                        %Call the function to plot the session data in the figure.
+    Plot_Timeline(obj(2),[],obj,[],data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue);                                        %Call the function to plot the session data in the figure.
     set(fig,'ResizeFcn',{@Resize,ax,obj});
 end
 
-function Linegraph(hObject,~,BarUI)
+function Linegraph(hObject,~,BarUI,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue)
 Line_value = get(hObject, 'value');
+Bar_value = get(BarUI, 'value');
 if Line_value == 1;
     set(BarUI, 'value', 0);
+elseif Line_value == 0 && Bar_value == 0;
+    set(hObject, 'value', 1);
 else
     set(BarUI, 'value', 1);
 end
+Plotvalue = 'Line';
+Plot_Timeline(obj(2),[],obj,[],data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue);  
 
-function Bargraph(hObject,~,LineUI)
+function Bargraph(hObject,~,LineUI,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue)
 Bar_value = get(hObject, 'value');
+Line_value = get(LineUI, 'value');
 if Bar_value == 1;
     set(LineUI, 'value', 0);
+elseif Bar_value == 0 && Line_value == 0;
+    set(hObject,'value',1);
 else
     set(LineUI, 'value', 1);
 end
+Plotvalue = 'Bar';
+Plot_Timeline(obj(2),[],obj,[],data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue); 
 
 %% This subfunction sorts the data into single-session values and sends it to the plot function.
-function Plot_Timeline(hObject,~,obj,fid,data,Weeks,AnimalData,index_selected,xlabels,EventData)
+function Plot_Timeline(hObject,~,obj,fid,data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue)
 path = 'C:\AnalyzeGroup';
 cd(path);
 Info = dir(path);
@@ -689,17 +700,37 @@ linewidth = .1*h;                                                          %Set 
 markersize = 0.75*h;                                                        %Set the marker size for the plots.
 % fontsize = 0.6*h;  
 colors = 'kbrgy';
+numbars = length(TimelineData(index_selected).Groups);
+numgroups = length(cell2mat(TimelineData(index_selected).Groups(1).data.MeanHitRate));
+groupwidth = min(0.8, numbars/(numbars+1.5));
 if strcmpi(str,'overall hit rate')                              %If we're plotting overall hit rate...
     ax = gcf; cla(ax); %tempaxis = gca;
     for p = 1:length(TimelineData(index_selected).Groups)
-        HitRate(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.MeanHitRate);
-        StandardDev(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.hitratestd);
+        HitRate(:,p) = cell2mat(TimelineData(index_selected).Groups(p).data.MeanHitRate);
+        StandardDev(:,p) = cell2mat(TimelineData(index_selected).Groups(p).data.hitratestd);
         GroupLegend(p) = TimelineData(index_selected).Groups(p).name;        
         hold on;
         gcf; %plot(HitRate(p,:), 'Color', colors(p),'Marker', 'o','MarkerFaceColor', colors(p));
-        errorbar(HitRate(p,:), StandardDev(p,:)./sqrt(length(HitRate)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
+        switch Plotvalue
+            case 'Line'
+                errorbar(HitRate(:,p), StandardDev(:,p)./sqrt(length(HitRate)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
+        end
         hold off;
-        CSV_Data(p,:) = HitRate(p,:);
+        CSV_Data(:,p) = HitRate(:,p);
+    end
+    switch Plotvalue
+        case 'Bar'
+            temp = bar(HitRate);            
+            for p = 1:length(temp)
+                temp(p).FaceColor = colors(p);
+                temp(p).EdgeColor = colors(p);
+            end
+            hold on;
+            for i = 1:numbars
+                x = (1:numgroups) - groupwidth/2 + (2*i-1) * groupwidth / (2*numbars);  % Aligning error bar with individual bar
+                errorbar(x, HitRate(:,i)', StandardDev(:,i)'./sqrt(length(HitRate)),colors(i), 'linestyle', 'none');
+            end
+            hold off;
     end
     legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','YLim', [0 1],...
         'XLim', [.5 length(HitRate)+.5],'XTickLabels', xlabels);
@@ -715,17 +746,35 @@ elseif any(strcmpi(str,{'median peak force',...
         'median peak angle','median signal peak'}))             %If we're plotting the median signal peak...
     ax = gcf; cla(ax);
     for p = 1:length(TimelineData(index_selected).Groups)
-        MedianPeak(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.MedianPeak);
-        StandardDev(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.medianpeakstd);
+        MedianPeak(:,p) = cell2mat(TimelineData(index_selected).Groups(p).data.MedianPeak);
+        StandardDev(:,p) = cell2mat(TimelineData(index_selected).Groups(p).data.medianpeakstd);
         GroupLegend(p) = TimelineData(index_selected).Groups(p).name;
         hold on;
         gcf; %plot(MedianPeak(p,:), 'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
-        errorbar(MedianPeak(p,:), StandardDev(p,:)./sqrt(length(MedianPeak)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
+        switch Plotvalue
+            case 'Line'
+                errorbar(MedianPeak(:,p), StandardDev(:,p)./sqrt(length(MedianPeak)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
+        end
         hold off;
-        CSV_Data(p,:) = MedianPeak(p,:);
+        CSV_Data(:,p) = MedianPeak(:,p);
+    end
+    switch Plotvalue
+        case 'Bar'
+            temp = bar(MedianPeak);
+            for p = 1:length(temp)
+                temp(p).FaceColor = colors(p);
+                temp(p).EdgeColor = colors(p);
+            end
+            hold on;
+            for i = 1:numbars
+                x = (1:numgroups) - groupwidth/2 + (2*i-1) * groupwidth / (2*numbars);  % Aligning error bar with individual bar
+                errorbar(x, MedianPeak(:,i)', StandardDev(:,i)'./sqrt(length(MedianPeak)),colors(i), 'linestyle', 'none');
+            end
+            hold off;
     end
     YMax = 1.1*max(max(MedianPeak)); YMax = round(YMax,-2); 
-    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth,'YLim', [0 YMax]);
+    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth,'YLim', [0 YMax],...
+        'XLim', [.5 length(MedianPeak)+.5],'XTickLabels', xlabels);
     yL = get(gca, 'YLim'); yLMax = max(yL);
     for q = 1:length(EventData);
         hold on;
@@ -738,17 +787,35 @@ elseif any(strcmpi(str,{'mean peak force',...
         'mean peak angle','mean signal peak'}))                 %If we're plotting the mean signal peak...
     ax = gcf; cla(ax); %ax = gca; cla(ax);
     for p = 1:length(TimelineData(index_selected).Groups)
-        MeanPeak(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.MeanPeak);
-        StandardDev(p,:) = cell2mat(TimelineData(index_selected).Groups(g).data.meanpeakstd);
+        MeanPeak(:,p) = cell2mat(TimelineData(index_selected).Groups(p).data.MeanPeak);
+        StandardDev(:,p) = cell2mat(TimelineData(index_selected).Groups(g).data.meanpeakstd);
         GroupLegend(p) = TimelineData(index_selected).Groups(p).name;       
         hold on;
         gcf; %plot(MeanPeak(p,:), 'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
-        errorbar(MeanPeak(p,:), StandardDev(p,:)./sqrt(length(MeanPeak)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
+        switch Plotvalue
+            case 'Line'
+                errorbar(MeanPeak(:,p), StandardDev(:,p)./sqrt(length(MeanPeak)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
+        end
         hold off;
-        CSV_Data(p,:) = MeanPeak(p,:);
+        CSV_Data(:,p) = MeanPeak(:,p);
+    end
+    switch Plotvalue
+        case 'Bar'
+            temp = bar(MeanPeak);
+            for p = 1:length(temp)
+                temp(p).FaceColor = colors(p);
+                temp(p).EdgeColor = colors(p);
+            end
+            hold on;
+            for i = 1:numbars
+                x = (1:numgroups) - groupwidth/2 + (2*i-1) * groupwidth / (2*numbars);  % Aligning error bar with individual bar
+                errorbar(x, MeanPeak(:,i)', StandardDev(:,i)'./sqrt(length(MeanPeak)),colors(i), 'linestyle', 'none');
+            end
+            hold off;
     end
     YMax = 1.1*max(max(MeanPeak)); YMax = round(YMax,-2);
-    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth,'YLim', [0 YMax]);
+    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth,'YLim', [0 YMax],...
+        'XLim', [.5 length(MeanPeak)+.5],'XTickLabels', xlabels);
     yL = get(gca, 'YLim'); yLMax = max(yL);
     for q = 1:length(EventData);
         hold on;
@@ -760,17 +827,35 @@ elseif any(strcmpi(str,{'mean peak force',...
 elseif strcmpi(str,'trial count')                               %If we're plotting number of trials....
     ax = gcf; cla(ax);
     for p = 1:length(TimelineData(index_selected).Groups)
-        TrialCount(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.MeanTrialCount);
-        StandardDev(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.meantrialcountstd);
+        TrialCount(:,p) = cell2mat(TimelineData(index_selected).Groups(p).data.MeanTrialCount);
+        StandardDev(:,p) = cell2mat(TimelineData(index_selected).Groups(p).data.meantrialcountstd);
         GroupLegend(p) = TimelineData(index_selected).Groups(p).name;
         hold on;
         gcf; %plot(TrialCount(p,:), 'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
-        errorbar(TrialCount(p,:), StandardDev(p,:)./sqrt(length(TrialCount)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
+        switch Plotvalue
+            case 'Line'
+                errorbar(TrialCount(:,p), StandardDev(:,p)./sqrt(length(TrialCount)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
+        end
         hold off;
-        CSV_Data(p,:) = TrialCount(p,:);
+        CSV_Data(:,p) = TrialCount(:,p);
+    end
+    switch Plotvalue
+        case 'Bar'
+            temp = bar(TrialCount);
+            for p = 1:length(temp)
+                temp(p).FaceColor = colors(p);
+                temp(p).EdgeColor = colors(p);
+            end
+            hold on;
+            for i = 1:numbars
+                x = (1:numgroups) - groupwidth/2 + (2*i-1) * groupwidth / (2*numbars);  % Aligning error bar with individual bar
+                errorbar(x, TrialCount(:,i)', StandardDev(:,i)'./sqrt(length(TrialCount)),colors(i), 'linestyle', 'none');
+            end
+            hold off;
     end
     YMax = 1.1*max(max(TrialCount)); YMax = round(YMax,-2);
-    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth,'YLim', [0 YMax]);
+    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth,'YLim', [0 YMax],...
+        'XLim', [.5 length(TrialCount)+.5],'XTickLabels', xlabels);
     yL = get(gca, 'YLim'); yLMax = max(yL);
     for q = 1:length(EventData);
         hold on;
@@ -782,17 +867,35 @@ elseif strcmpi(str,'trial count')                               %If we're plotti
 elseif strcmpi(str,'peak velocity');
     ax = gcf; cla(ax);
     for p = 1:length(TimelineData(index_selected).Groups)
-        PeakVelocity(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.MeanPeakVelocity);
-        StandardDev(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.meanpeakvelocitystd);
+        PeakVelocity(:,p) = cell2mat(TimelineData(index_selected).Groups(p).data.MeanPeakVelocity);
+        StandardDev(:,p) = cell2mat(TimelineData(index_selected).Groups(p).data.meanpeakvelocitystd);
         GroupLegend(p) = TimelineData(index_selected).Groups(p).name;
         hold on;
         gcf; %plot(PeakVelocity(p,:), 'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
-        errorbar(PeakVelocity(p,:), StandardDev(p,:)./sqrt(length(PeakVelocity)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
+        switch Plotvalue
+            case 'Line'
+                errorbar(PeakVelocity(:,p), StandardDev(:,p)./sqrt(length(PeakVelocity)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
+        end
         hold off;
-        CSV_Data(p,:) = PeakVelocity(p,:);
+        CSV_Data(:,p) = PeakVelocity(:,p);
+    end
+    switch Plotvalue
+        case 'Bar'
+            temp = bar(PeakVelocity);
+            for p = 1:length(temp)
+                temp(p).FaceColor = colors(p);
+                temp(p).EdgeColor = colors(p);
+            end
+            hold on;
+            for i = 1:numbars
+                x = (1:numgroups) - groupwidth/2 + (2*i-1) * groupwidth / (2*numbars);  % Aligning error bar with individual bar
+                errorbar(x, PeakVelocity(:,i)', StandardDev(:,i)'./sqrt(length(PeakVelocity)),colors(i), 'linestyle', 'none');
+            end
+            hold off;
     end
     YMax = 1.1*max(max(PeakVelocity)); YMax = round(YMax);
-    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth,'YLim', [0 YMax]);
+    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth,'YLim', [0 YMax],...
+        'XLim', [.5 length(PeakVelocity)+.5],'XTickLabels', xlabels);
     yL = get(gca, 'YLim'); yLMax = max(yL);
     for q = 1:length(EventData);
         hold on;
@@ -804,17 +907,35 @@ elseif strcmpi(str,'peak velocity');
 elseif strcmpi(str,'latency to hit');
     ax = gcf; cla(ax);
     for p = 1:length(TimelineData(index_selected).Groups)
-        Latency(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.MeanLatency);
-        StandardDev(p,:) = cell2mat(TimelineData(index_selected).Groups(p).data.meanlatencystd);
+        Latency(:,p) = cell2mat(TimelineData(index_selected).Groups(p).data.MeanLatency);
+        StandardDev(:,p) = cell2mat(TimelineData(index_selected).Groups(p).data.meanlatencystd);
         GroupLegend(p) = TimelineData(index_selected).Groups(p).name;
         hold on;
         gcf; %plot(Latency(p,:), 'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
-        errorbar(Latency(p,:), StandardDev(p,:)./sqrt(length(Latency)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
+        switch Plotvalue
+            case 'Line'
+                errorbar(Latency(:,p), StandardDev(:,p)./sqrt(length(Latency)),'Color', colors(p), 'Marker', 'o','MarkerFaceColor', colors(p));
+        end
         hold off;
-        CSV_Data(p,:) = Latency(p,:);
+        CSV_Data(:,p) = Latency(:,p);
+    end
+    switch Plotvalue
+        case 'Bar'
+            temp = bar(Latency);
+            for p = 1:length(temp)
+                temp(p).FaceColor = colors(p);
+                temp(p).EdgeColor = colors(p);
+            end
+            hold on;
+            for i = 1:numbars
+                x = (1:numgroups) - groupwidth/2 + (2*i-1) * groupwidth / (2*numbars);  % Aligning error bar with individual bar
+                errorbar(x, Latency(:,i)', StandardDev(:,i)'./sqrt(length(Latency)),colors(i), 'linestyle', 'none');
+            end
+            hold off;
     end
     YMax = 1.1*max(max(Latency)); YMax = round(YMax,-1);
-    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth,'YLim', [0 YMax]);
+    legend(GroupLegend,0,'Fontsize',10); box off; set(gca, 'TickDir', 'out','Linewidth', linewidth,'YLim', [0 YMax],...
+        'XLim', [.5 length(Latency)+.5],'XTickLabels', xlabels);
     yL = get(gca, 'YLim'); yLMax = max(yL);
     for q = 1:length(EventData);
         hold on;
@@ -825,6 +946,7 @@ elseif strcmpi(str,'latency to hit');
     end
 end
 
+CSV_Data = CSV_Data';
 t = unique(horzcat(data.times));                                            %Horizontally concatenate all of the timestamps.
 t = unique(fix(t));                                                     %Find the unique truncated serial date numbers.
 t = [t; t + 1]';
@@ -934,7 +1056,13 @@ else                                                                        %Oth
 end
 
 %% This subfunction sorts the data into daily values and sends it to the plot function.
-function Export_Data(hObject,~,ax,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData)
+function Export_Data(hObject,~,ax,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue,LineUI)
+LineStatus = get(LineUI, 'value');
+if LineStatus == 1;
+    Plotvalue = 'Line';
+else
+    Plotvalue = 'Bar';
+end
 output = questdlg(['Would you like to export the data as a spreadsheet '...
     'or figure image?'],'Data Type?','Spreadsheet','Image','Both','Both');  %Ask the user if they'd like to export the data as a spreadsheet or image.
 fig = get(hObject,'parent');                                                %Grab the parent figure of the export button.
@@ -974,7 +1102,7 @@ if any(strcmpi({'image','both'},output))                                    %If 
     set(ax,'units','centimeters','position',pos);                           %Reset the position of the axes.
     set(obj,'visible','on');                                                %Make all of the other figures visible again.
 %     i = strcmpi(get(obj,'fontweight'),'bold');                              %Find the pushbutton with the bold fontweight.
-    Plot_Timeline(obj(2),[],obj,[],data,Weeks,AnimalData,index_selected,xlabels,EventData);                                        %Call the subfunction to plot the data by the appropriate timeline.
+    Plot_Timeline(obj(2),[],obj,[],data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue);                                        %Call the subfunction to plot the data by the appropriate timeline.
     set(fig,'color',temp,'ResizeFcn',{@Resize,ax,obj});                     %Set the Resize function for the figure.
     drawnow;                                                                %Immediately update the figure.    
 end
@@ -994,7 +1122,7 @@ if any(strcmpi({'spreadsheet','both'},output))                              %If 
     end
     fid = fopen([path file],'wt');                                          %Open a new text file to write the data to.   
 %     i = strcmpi(get(obj,'fontweight'),'bold');                              %Find the pushbutton with the bold fontweight.
-    Plot_Timeline(obj(2),[],obj,fid,data,Weeks,AnimalData,index_selected,xlabels,EventData);                                       %Call the subfunction to write the data by the appropriate timeline.
+    Plot_Timeline(obj(2),[],obj,fid,data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue);                                       %Call the subfunction to write the data by the appropriate timeline.
     fclose(fid);                                                            %Close the figure.
     winopen([path file]);                                                   %Open the CSV file.
 end
@@ -1165,9 +1293,9 @@ if xy(1) >= a(1) && xy(1) <= a(2) && xy(2) >= a(3) && xy(2) <= a(4)         %If 
 end
 
 %% This function is called when the user selects a plot type in the pop-up menu.
-function Set_Plot_Type(~,~,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData)
+function Set_Plot_Type(~,~,obj,data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue)
 % i = strcmpi(get(obj,'fontweight'),'bold');                                  %Find the pushbutton with the bold fontweight.
-Plot_Timeline(obj(1),[],obj,[],data,Weeks,AnimalData,index_selected,xlabels,EventData);                                            %Call the subfunction to plot the data by the appropriate timeline.
+Plot_Timeline(obj(1),[],obj,[],data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue);                                            %Call the subfunction to plot the data by the appropriate timeline.
 
 %% This function updates the GUI with Experiment Name, Subjects, and Event Data
 function ExperimentCallback(hObject,~,GUI_Subjects,GUI_GroupNames,ExperimentNames,Subjects,Groups,Events,Labels)
