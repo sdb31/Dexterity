@@ -804,7 +804,7 @@ if strcmpi(str,'overall hit rate')                              %If we're plotti
                     hold on;
                     for i = 1:numbars
                         x = (1:numgroups) - groupwidth/2 + (2*i-1) * groupwidth / (2*numbars);  % Aligning error bar with individual bar
-                        errorbar(x, HitRate(:,i)', StandardDev(:,i)'./sqrt(length(HitRate)),'k', 'linestyle', 'none');
+                        errorbar(x, HitRate(:,i)', zeros(size(x)),StandardDev(:,i)'./sqrt(length(HitRate)),'k', 'linestyle', 'none');
                     end
                     hold off;
             end
@@ -865,7 +865,7 @@ elseif any(strcmpi(str,{'median peak force',...
                     hold on;
                     for i = 1:numbars
                         x = (1:numgroups) - groupwidth/2 + (2*i-1) * groupwidth / (2*numbars);  % Aligning error bar with individual bar
-                        errorbar(x, MedianPeak(:,i)', StandardDev(:,i)'./sqrt(length(MedianPeak)),'k', 'linestyle', 'none');
+                        errorbar(x, MedianPeak(:,i)', zeros(size(x)), StandardDev(:,i)'./sqrt(length(MedianPeak)),'k', 'linestyle', 'none');
                     end
                     hold off;
             end
@@ -927,7 +927,7 @@ elseif any(strcmpi(str,{'mean peak force',...
                     hold on;
                     for i = 1:numbars
                         x = (1:numgroups) - groupwidth/2 + (2*i-1) * groupwidth / (2*numbars);  % Aligning error bar with individual bar
-                        errorbar(x, MeanPeak(:,i)', StandardDev(:,i)'./sqrt(length(MeanPeak)),'k', 'linestyle', 'none');
+                        errorbar(x, MeanPeak(:,i)', zeros(size(x)), StandardDev(:,i)'./sqrt(length(MeanPeak)),'k', 'linestyle', 'none');
                     end
                     hold off;
             end
@@ -988,7 +988,7 @@ elseif strcmpi(str,'trial count')                               %If we're plotti
                     hold on;
                     for i = 1:numbars
                         x = (1:numgroups) - groupwidth/2 + (2*i-1) * groupwidth / (2*numbars);  % Aligning error bar with individual bar
-                        errorbar(x, TrialCount(:,i)', StandardDev(:,i)'./sqrt(length(TrialCount)),'k', 'linestyle', 'none');
+                        errorbar(x, TrialCount(:,i)', zeros(size(x)),StandardDev(:,i)'./sqrt(length(TrialCount)),'k', 'linestyle', 'none');
                     end
                     hold off;
             end
@@ -1049,7 +1049,7 @@ elseif strcmpi(str,'peak velocity');
                     hold on;
                     for i = 1:numbars
                         x = (1:numgroups) - groupwidth/2 + (2*i-1) * groupwidth / (2*numbars);  % Aligning error bar with individual bar
-                        errorbar(x, PeakVelocity(:,i)', StandardDev(:,i)'./sqrt(length(PeakVelocity)),'k', 'linestyle', 'none');
+                        errorbar(x, PeakVelocity(:,i)', zeros(size(x)),StandardDev(:,i)'./sqrt(length(PeakVelocity)),'k', 'linestyle', 'none');
                     end
                     hold off;
             end
@@ -1110,7 +1110,7 @@ elseif strcmpi(str,'latency to hit');
                     hold on;
                     for i = 1:numbars
                         x = (1:numgroups) - groupwidth/2 + (2*i-1) * groupwidth / (2*numbars);  % Aligning error bar with individual bar
-                        errorbar(x, Latency(:,i)', StandardDev(:,i)'./sqrt(length(Latency)),'k', 'linestyle', 'none');
+                        errorbar(x, Latency(:,i)', zeros(size(x)),StandardDev(:,i)'./sqrt(length(Latency)),'k', 'linestyle', 'none');
                     end
                     hold off;
             end

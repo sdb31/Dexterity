@@ -43,40 +43,93 @@ AnalyzeGroup
 guidata(handles.fig,handles);
 end
 
-function LabAnalysis(hObject,~)
-Table = readtable('LabSpecificAnalysisConfig.txt');
-Path = Table{:,2};
+function LabAnalysis(~,~)
+% Table = readtable('LabSpecificAnalysisConfig.txt');
+% Path = Table{:,2};
+datapath = 'C:\KnobAnalysis\Lab_Specific_Config_Files\';                                         %Set the primary local data path for saving data files.
+if ~exist(datapath,'dir')                                           %If the primary local data path doesn't already exist...
+    mkdir(datapath);                                                %Make the primary local data path.
+end
+% cd(datapath);
+Info = dir(datapath);
+if length(Info) < 3
+   Lab_Name = inputdlg('What is the name of the lab?', 'Lab Name', [1 50]);
+   Lab_NameNS = char(Lab_Name); Lab_NameNS = Lab_NameNS(Lab_NameNS~=' ');
+   functionspath = uigetdir('C:\', 'Where are your lab''s functions located?');
+   ConfigFileName = [Lab_NameNS 'Config.mat'];
+   config.Lab_Name = Lab_Name; config.path = functionspath; 
+   functionspath = [functionspath '\']; cd(functionspath); FctInfo = dir(functionspath);
+   FctInfo = {FctInfo.name}; FctInfo = FctInfo(3:end);
+   config.function_names = FctInfo;
+   cd(datapath); save(ConfigFileName, 'config');   
+end
+cd(datapath);
+Info = dir(datapath); FileNames = {Info.name}; FileNames = FileNames(3:end);
+for i = 1:length(FileNames);
+    load(FileNames{i})
+    LabNames(i) = config.Lab_Name;
+    FileInfo(i).functions = config.function_names;
+end
+% load(FileNames{1}); Lab_Name = config.Lab_Name; Functions = config.function_names;
 pos = get(0,'Screensize');                                              %Grab the screensize.
-h = 8;                                                                 %Set the height of the figure, in centimeters.
+h = 9;                                                                 %Set the height of the figure, in centimeters.
 w = 15;                                                                 %Set the width of the figure, in centimeters.
-FileNames = {};
+% FileNames = {};
 fig = figure('numbertitle','off','units','centimeters',...
-    'name',['Lab Specific Analysis: Knob'],'menubar','none',...
+    'name','Lab Specific Analysis: Knob','menubar','none',...
     'position',[pos(3)/2-w/2, pos(4)/2-h/2, w, h]);
 Choose_Lab = uicontrol('Parent', fig, 'Style', 'text', 'String', 'Please choose a lab:', ...
-    'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.1 .85 .3 .05],...
+    'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.1 .9 .3 .05],...
     'Fontsize', 12, 'Fontweight', 'bold') ;
 Analysis_Type = uicontrol('Parent', fig, 'Style', 'listbox', 'HorizontalAlignment', 'left',...
-    'callback', {@AnalysisType},'string',FileNames,...
-    'units', 'normalized', 'Position', [.525 .1 .45 .7]);
-Lab_Name = uicontrol('Parent', fig, 'Style', 'listbox', 'HorizontalAlignment', 'left','string', Table{:,1},...
-    'units', 'normalized', 'Position', [.025 .1 .45 .7],'callback',{@LabName,Path,Analysis_Type},...
+    'callback', {@AnalysisType},'string',FileInfo(1).functions,...
+    'units', 'normalized', 'Position', [.525 .25 .45 .6]);
+Lab_Name = uicontrol('Parent', fig, 'Style', 'listbox', 'HorizontalAlignment', 'left','string', LabNames,...
+    'units', 'normalized', 'Position', [.025 .25 .45 .6],'callback',{@LabName,Analysis_Type},...
     'Fontsize', 12);
 Lab_Functions = uicontrol('Parent', fig, 'Style', 'text', 'String', 'Lab Functions', ...
-    'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.65 .85 .3 .05],...
+    'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.65 .9 .3 .05],...
     'Fontsize', 12, 'Fontweight', 'bold') ;
+MoreLabs = uicontrol('Parent',fig,'Style','pushbutton','string','Add New Lab',...
+    'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.4 .05 .2 .15],...
+    'Fontsize', 12, 'Fontweight', 'bold') ;
+set(MoreLabs,'callback',{@AddNewLab,Lab_Name});
+end
+
+function AddNewLab(~,~,Lab_Name)
+datapath = 'C:\KnobAnalysis\Lab_Specific_Config_Files\';                                         %Set the primary local data path for saving data files.
+if ~exist(datapath,'dir')                                           %If the primary local data path doesn't already exist...
+    mkdir(datapath);                                                %Make the primary local data path.
+end
+% Info = dir(datapath);
+New_Lab_Name = inputdlg('What is the name of the lab?', 'Lab Name', [1 50]);
+Lab_NameNS = char(New_Lab_Name); Lab_NameNS = Lab_NameNS(Lab_NameNS~=' ');
+functionspath = uigetdir('C:\', 'Where are your lab''s functions located?');
+ConfigFileName = [Lab_NameNS 'Config.mat'];
+config.Lab_Name = New_Lab_Name; config.path = functionspath;
+functionspath = [functionspath '\']; cd(functionspath); FctInfo = dir(functionspath);
+FctInfo = {FctInfo.name}; FctInfo = FctInfo(3:end);
+config.function_names = FctInfo;
+cd(datapath); save(ConfigFileName, 'config');
+% LabNames(length(LabNames)+1) = New_Lab_Name;
+% set(Analysis_Type,'string',FctInfo);
+LabNames = get(Lab_Name,'string'); LabNames(length(LabNames)+1) = New_Lab_Name;
+set(Lab_Name,'string',LabNames);
+% Info = dir(datapath); FileNames = {Info.name}; FileNames = FileNames(3:end);
+% load(FileNames{1}); Lab_Name = config.Lab_Name; Functions = config.function_names;
 
 end
 
-function LabName(hObject,~,Path,Analysis_Type)
-index_selected = get(hObject,'value');
-Path = Path{index_selected};
-cd(Path);
-Path = char(Path);
-list = dir(Path);
-FileNames = {list.name};
-FileNames = FileNames(3:end);
-set(Analysis_Type,'string',FileNames);
+function LabName(hObject,~,Analysis_Type)
+index_selected = get(hObject,'value'); 
+string_selected = get(hObject,'string'); string_selected = string_selected(index_selected);
+string_selected = char(string_selected);
+string_selected = string_selected(string_selected ~= ' ');
+configfile = [string_selected 'Config.mat'];
+load(configfile);
+Lab_Name = config.Lab_Name; Functions = config.function_names;
+set(Analysis_Type,'string',Functions);
+% set(hObject,'string',Lab_Name);
 end
 
 function AnalysisType(hObject,~)
