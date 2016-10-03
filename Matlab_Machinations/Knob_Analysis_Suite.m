@@ -91,9 +91,21 @@ Lab_Functions = uicontrol('Parent', fig, 'Style', 'text', 'String', 'Lab Functio
     'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.65 .9 .3 .05],...
     'Fontsize', 12, 'Fontweight', 'bold') ;
 MoreLabs = uicontrol('Parent',fig,'Style','pushbutton','string','Add New Lab',...
-    'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.4 .05 .2 .15],...
+    'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.15 .05 .3 .15],...
+    'Fontsize', 12, 'Fontweight', 'bold') ;
+ConfigFile = uicontrol('Parent',fig,'Style','pushbutton','string','Load Config File',...
+    'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.55 .05 .3 .15],...
     'Fontsize', 12, 'Fontweight', 'bold') ;
 set(MoreLabs,'callback',{@AddNewLab,Lab_Name});
+set(ConfigFile,'callback',{@LoadConfigFile});
+end
+
+function LoadConfigFile(~,~)
+% datapath = 'C:\';
+[FileName,PathName] = uigetfile('*.mat','Select the configuration file');
+load(FileName);
+Lab_Name = config.Lab_Name; Functions = config.function_names;
+set(Analysis_Type,'string',Functions);
 end
 
 function AddNewLab(~,~,Lab_Name)
@@ -101,7 +113,6 @@ datapath = 'C:\KnobAnalysis\Lab_Specific_Config_Files\';                        
 if ~exist(datapath,'dir')                                           %If the primary local data path doesn't already exist...
     mkdir(datapath);                                                %Make the primary local data path.
 end
-% Info = dir(datapath);
 New_Lab_Name = inputdlg('What is the name of the lab?', 'Lab Name', [1 50]);
 Lab_NameNS = char(New_Lab_Name); Lab_NameNS = Lab_NameNS(Lab_NameNS~=' ');
 functionspath = uigetdir('C:\', 'Where are your lab''s functions located?');
@@ -111,13 +122,8 @@ functionspath = [functionspath '\']; cd(functionspath); FctInfo = dir(functionsp
 FctInfo = {FctInfo.name}; FctInfo = FctInfo(3:end);
 config.function_names = FctInfo;
 cd(datapath); save(ConfigFileName, 'config');
-% LabNames(length(LabNames)+1) = New_Lab_Name;
-% set(Analysis_Type,'string',FctInfo);
 LabNames = get(Lab_Name,'string'); LabNames(length(LabNames)+1) = New_Lab_Name;
 set(Lab_Name,'string',LabNames);
-% Info = dir(datapath); FileNames = {Info.name}; FileNames = FileNames(3:end);
-% load(FileNames{1}); Lab_Name = config.Lab_Name; Functions = config.function_names;
-
 end
 
 function LabName(hObject,~,Analysis_Type)
@@ -129,7 +135,6 @@ configfile = [string_selected 'Config.mat'];
 load(configfile);
 Lab_Name = config.Lab_Name; Functions = config.function_names;
 set(Analysis_Type,'string',Functions);
-% set(hObject,'string',Lab_Name);
 end
 
 function AnalysisType(hObject,~)
