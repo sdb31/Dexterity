@@ -83,6 +83,8 @@ if length(Info) < 3
             end
             MasterConfigFileName = 'MasterConfig.mat'; cd(masterdatapath); save(MasterConfigFileName,'configfolderpath');
         case 'Load Config'
+            configfolderpath = uigetdir('C:\','Where are KnobAnalysis config files located?');
+            MasterConfigFileName = 'MasterConfig.mat'; cd(masterdatapath); save(MasterConfigFileName,'configfolderpath');
             [FileName,PathName] = uigetfile('*.mat','Select the configuration file');
             datapath = 'C:\KnobAnalysis\Lab_Specific_Config_Files\';
             olddatapath = [PathName FileName];
