@@ -475,6 +475,14 @@ temp = [SelectedExperiment{:} 'Config.mat'];
 load(temp);
 devices = config.devices;
 data = config.plotdata;
+% % Calculate training days
+% for r = 1:length(data);
+%    clear temp
+%    for l = 1:length(data(r).times)
+%        temp(l) = {datestr(data(r).times(l),1)};
+%    end
+%    data(r).training_days = length(unique(temp)); 
+% end
 Weeks = config.weeks;
 AnimalData = config.animal;
 EventData.name = config.events; EventData.location = config.event_location;

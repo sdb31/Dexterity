@@ -339,6 +339,13 @@ for d = 1:length(devices)                                                   %Ste
                 end
             end
         end
+        % Calculate training days
+        temp = {};
+        for l = 1:length(plotdata(r).times)
+            temp(l) = {datestr(plotdata(r).times(l),1)};
+        end
+        plotdata(r).training_days = length(unique(temp));
+        
     end
     for r = 1:length(plotdata)                                                  %Step through each rat.
         clear dates
@@ -418,7 +425,7 @@ for d = 1:length(devices)                                                   %Ste
             
             data = plotdata;
             pos = get(0,'Screensize');                                              %Grab the screensize.
-            h = 10;                                                                 %Set the height of the figure, in centimeters.
+            h = 12;                                                                 %Set the height of the figure, in centimeters.
             w = 15;                                                                 %Set the width of the figure, in centimeters.
             for d = 1:length(devices)                                                   %Step through the devices.
                 fig = figure('numbertitle','off','units','centimeters',...
@@ -428,10 +435,10 @@ for d = 1:length(devices)                                                   %Ste
                 fontsize = 0.6*28.34*ui_h;                                              %Set the fontsize for all uicontrols.
                 sp1 = 0.02*h;                                                           %Set the vertical spacing between axes and uicontrols.
                 sp2 = 0.01*w;                                                           %Set the horizontal spacing between axes and uicontrols.
-                pos = [7*sp2,3*sp1,w-8*sp2,h-ui_h-5*sp1];                               %Set the position of the axes.
+                pos = [7*sp2,7*sp1,w-8*sp2,h-ui_h-10*sp1];                               %Set the position of the axes.
                 ax = axes('units','centimeters','position',pos,'box','on',...
                     'linewidth',2);                                                     %Create axes for showing the log events histogram.
-                obj = zeros(1,5);                                                       %Create a matrix to hold timescale uicontrol handles.
+                obj = zeros(1,6);                                                       %Create a matrix to hold timescale uicontrol handles.
                 str = {'Overall Hit Rate',...
                     'Total Trial Count',...
                     'Mean Peak Force',...
@@ -461,9 +468,13 @@ for d = 1:length(devices)                                                   %Ste
                     obj(i) = uicontrol(fig,'style','pushbutton','string',str{i-1},...
                         'units','centimeters','position',pos,'fontsize',fontsize);      %Create pushbuttons for selecting the timescale.
                 end
+                pos = [sp2, sp1, 2*(w-6*sp2)/6, ui_h];  
+                obj(6) = uicontrol(fig,'style','radiobutton','string','Training Days',...
+                    'units','centimeters','position',pos,'fontsize',fontsize);
                 set(obj(1),'callback',{@Set_Plot_Type,obj,data});                            %Set the callback for the pop-up menu.
                 set(obj(2:4),'callback',{@Plot_Timeline,obj,[],data});                       %Set the callback for the timescale buttons.
                 set(obj(5),'callback',{@Export_Data,ax,obj,data});                           %Set the callback for the export button.
+                set(obj(6),'callback',{@TrainingDays});
                 set(fig,'userdata',data);                                           %Save the plot data to the figure's 'UserData' property.
                 Plot_Timeline(obj(2),[],obj,[],data);                                        %Call the function to plot the session data in the figure.
                 set(fig,'ResizeFcn',{@Resize,ax,obj});
@@ -471,6 +482,9 @@ for d = 1:length(devices)                                                   %Ste
         end
     end
 end
+
+function TrainingDays(hObject,~)
+uiwait(msgbox('Hello'));
 
 %% This function loads an existing analysis that the user has saved
 function ExistingAnalysis(hObject,~)
@@ -958,7 +972,9 @@ ui_h = 0.07*h;                                                              %Set
 sp1 = 0.02*h;                                                               %Set the vertical spacing between axes and uicontrols.
 sp2 = 0.01*w;                                                               %Set the horizontal spacing between axes and uicontrols.
 fontsize = 0.6*28.34*ui_h;                                                  %Set the fontsize for all uicontrols.
-pos = [7*sp2,3*sp1,w-8*sp2,h-ui_h-5*sp1];                                   %Create an axes position matrix.
+% pos = [7*sp2,3*sp1,w-8*sp2,h-ui_h-5*sp1];   
+pos = [7*sp2,7*sp1,w-8*sp2,h-ui_h-10*sp1];
+%Create an axes position matrix.
 set(ax,'units','centimeters','position', pos);                              %Reset the position of the axes.
 pos = [sp2, h-sp1-ui_h, 2*(w-6*sp2)/6, ui_h];                               %Create the position matrix for the pop-up menu.
 set(obj(1),'units','centimeters','position',pos,'fontsize',fontsize);       %Set the position of the pop-up menu.
@@ -966,6 +982,8 @@ for i = 2:5                                                                 %Ste
     pos = [i*sp2+i*(w-6*sp2)/6, h-sp1-ui_h, (w-6*sp2)/6, ui_h];             %Create the position matrix for each pushbutton.
     set(obj(i),'units','centimeters','position',pos,'fontsize',fontsize);   %Set the pushbutton position and fontsize.
 end
+pos = [sp2, sp1, 2*(w-6*sp2)/6, ui_h];
+set(obj(6),'units','centimeters','position',pos,'fontsize',fontsize);
 linewidth = 0.1*h;                                                          %Set the linewidth for the plots.
 markersize = 0.75*h;                                                        %Set the marker size for the plots.
 fontsize = 0.6*h;                                                           %Set the fontsize for all text objects.
