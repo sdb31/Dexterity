@@ -344,7 +344,7 @@ for d = 1:length(devices)                                                   %Ste
         for l = 1:length(plotdata(r).times)
             temp(l) = {datestr(plotdata(r).times(l),1)};
         end
-        plotdata(r).training_days = length(unique(temp));
+        plotdata(r).training_days = 1:1:length(unique(temp));
         
     end
     for r = 1:length(plotdata)                                                  %Step through each rat.
@@ -422,7 +422,22 @@ for d = 1:length(devices)                                                   %Ste
             uiwait(msgbox('Only one animal is loaded so a separate figure with all animals will not be displayed',...
                 'Only One Animal Found'));
         else
-            
+%             GroupingAnimals = questdlg('Do you want to group animals?', 'Group Animals',...
+%                 'Yes', 'No', 'Cancel');
+%             if strcmpi(GroupingAnimals,'Yes') == 1;
+%                 pos = get(0,'Screensize');
+%                 h = 10;
+%                 w = 10;
+%                 fig = figure('numbertitle','off','units','centimeters',...
+%                     'name','Group Animal UI', 'menubar','none',...
+%                     'position',[pos(3)/2-w/2, pos(4)/2-h/2, w, h]);
+%                 str = {'1','2','3','4','5','6','7','8'};   
+%                 Number_of_Groups_Text = uicontrol(fig,'style','text','string','Number of Groups',...
+%                     'units','normalized','position',[.05 .9 .35 .05], 'fontsize', 12);
+%                 Number_of_Groups = uicontrol(fig,'style','popup','string',str,...
+%                     'units','normalized','position',[.1 .825 .2 .05],'fontsize',12); 
+%                 set(Number_of_Groups,'callback',GroupsAssig
+%             end
             data = plotdata;
             pos = get(0,'Screensize');                                              %Grab the screensize.
             h = 12;                                                                 %Set the height of the figure, in centimeters.
@@ -438,7 +453,7 @@ for d = 1:length(devices)                                                   %Ste
                 pos = [7*sp2,7*sp1,w-8*sp2,h-ui_h-10*sp1];                               %Set the position of the axes.
                 ax = axes('units','centimeters','position',pos,'box','on',...
                     'linewidth',2);                                                     %Create axes for showing the log events histogram.
-                obj = zeros(1,6);                                                       %Create a matrix to hold timescale uicontrol handles.
+                obj = zeros(1,7);                                                       %Create a matrix to hold timescale uicontrol handles.
                 str = {'Overall Hit Rate',...
                     'Total Trial Count',...
                     'Mean Peak Force',...
@@ -471,11 +486,15 @@ for d = 1:length(devices)                                                   %Ste
                 pos = [sp2, sp1, 2*(w-6*sp2)/6, ui_h];  
                 obj(6) = uicontrol(fig,'style','radiobutton','string','Training Days',...
                     'units','centimeters','position',pos,'fontsize',fontsize);
+                pos = [30*sp2, sp1, 2*(w-6*sp2)/6, ui_h];
+                obj(7) = uicontrol(fig,'style','radiobutton','string','Group Animals',...
+                    'units','centimeters','position',pos,'fontsize',fontsize);
                 set(obj(1),'callback',{@Set_Plot_Type,obj,data});                            %Set the callback for the pop-up menu.
                 set(obj(2:4),'callback',{@Plot_Timeline,obj,[],data});                       %Set the callback for the timescale buttons.
                 set(obj(5),'callback',{@Export_Data,ax,obj,data});                           %Set the callback for the export button.
-                set(obj(6),'callback',{@TrainingDays});
-                set(fig,'userdata',data);                                           %Save the plot data to the figure's 'UserData' property.
+                set(obj(6),'callback',{@TrainingDays,obj,data});
+                set(obj(7),'callback',{@GroupAnimals,obj,data});
+                set(fig,'userdata',data);                                           %Save the plot data to the figure's 'UserData' property.                
                 Plot_Timeline(obj(2),[],obj,[],data);                                        %Call the function to plot the session data in the figure.
                 set(fig,'ResizeFcn',{@Resize,ax,obj});
             end
@@ -483,8 +502,13 @@ for d = 1:length(devices)                                                   %Ste
     end
 end
 
-function TrainingDays(hObject,~)
-uiwait(msgbox('Hello'));
+function TrainingDays(~,~,obj,data)
+i = strcmpi(get(obj,'fontweight'),'bold');
+Plot_Timeline(obj(i),[],obj,[],data);     
+
+function GroupAnimals(~,~,obj,data)
+i = strcmpi(get(obj,'fontweight'),'bold');
+Plot_Timeline(obj(i),[],obj,[],data);
 
 %% This function loads an existing analysis that the user has saved
 function ExistingAnalysis(hObject,~)
@@ -550,10 +574,11 @@ for d = 1:length(devices)
                 fontsize = 0.6*28.34*ui_h;                                              %Set the fontsize for all uicontrols.
                 sp1 = 0.02*h;                                                           %Set the vertical spacing between axes and uicontrols.
                 sp2 = 0.01*w;                                                           %Set the horizontal spacing between axes and uicontrols.
-                pos = [7*sp2,3*sp1,w-8*sp2,h-ui_h-5*sp1];                               %Set the position of the axes.
+%                 pos = [7*sp2,3*sp1,w-8*sp2,h-ui_h-5*sp1];                               %Set the position of the axes.
+                pos = [7*sp2,7*sp1,w-8*sp2,h-ui_h-10*sp1]; 
                 ax = axes('units','centimeters','position',pos,'box','on',...
                     'linewidth',2);                                                     %Create axes for showing the log events histogram.
-                obj = zeros(1,5);                                                       %Create a matrix to hold timescale uicontrol handles.
+                obj = zeros(1,7);                                                       %Create a matrix to hold timescale uicontrol handles.
                 str = {'Overall Hit Rate',...
                     'Total Trial Count',...
                     'Mean Peak Force',...
@@ -583,10 +608,18 @@ for d = 1:length(devices)
                     obj(i) = uicontrol(fig,'style','pushbutton','string',str{i-1},...
                         'units','centimeters','position',pos,'fontsize',fontsize);      %Create pushbuttons for selecting the timescale.
                 end
+                pos = [sp2, sp1, 2*(w-6*sp2)/6, ui_h]; 
+                obj(6) = uicontrol(fig,'style','radiobutton','string','Training Days',...
+                    'units','centimeters','position',pos,'fontsize',fontsize);
+                pos = [30*sp2, sp1, 2*(w-6*sp2)/6, ui_h];
+                obj(7) = uicontrol(fig,'style','radiobutton','string','Group Animals',...
+                    'units','centimeters','position',pos,'fontsize',fontsize);
                 set(obj(1),'callback',{@Set_Plot_Type,obj,data});                            %Set the callback for the pop-up menu.
                 set(obj(2:4),'callback',{@Plot_Timeline,obj,[],data});                       %Set the callback for the timescale buttons.
                 set(obj(5),'callback',{@Export_Data,ax,obj,data});                           %Set the callback for the export button.
-                set(fig,'userdata',data);                                           %Save the plot data to the figure's 'UserData' property.
+                set(obj(6),'callback',{@TrainingDays,obj,data});
+                set(obj(7),'callback',{@GroupAnimals,obj,data});
+                set(fig,'userdata',data);                                                              %Save the plot data to the figure's 'UserData' property.
                 Plot_Timeline(obj(2),[],obj,[],data);                                        %Call the function to plot the session data in the figure.
                 set(fig,'ResizeFcn',{@Resize,ax,obj});
             end
@@ -608,10 +641,11 @@ for d = 1:length(devices)                                                   %Ste
     fontsize = 0.6*28.34*ui_h;                                              %Set the fontsize for all uicontrols.
     sp1 = 0.02*h;                                                           %Set the vertical spacing between axes and uicontrols.
     sp2 = 0.01*w;                                                           %Set the horizontal spacing between axes and uicontrols.
-    pos = [7*sp2,3*sp1,w-8*sp2,h-ui_h-5*sp1];                               %Set the position of the axes.
+%     pos = [7*sp2,3*sp1,w-8*sp2,h-ui_h-5*sp1];                               %Set the position of the axes.
+    pos = [7*sp2,7*sp1,w-8*sp2,h-ui_h-10*sp1];
     ax = axes('units','centimeters','position',pos,'box','on',...
         'linewidth',2);                                                     %Create axes for showing the log events histogram.
-    obj = zeros(1,5);                                                       %Create a matrix to hold timescale uicontrol handles.
+    obj = zeros(1,6);                                                       %Create a matrix to hold timescale uicontrol handles.
     str = {'Overall Hit Rate',...
         'Total Trial Count',...
         'Mean Peak Force',...
@@ -641,10 +675,14 @@ for d = 1:length(devices)                                                   %Ste
         obj(i) = uicontrol(fig,'style','pushbutton','string',str{i-1},...
             'units','centimeters','position',pos,'fontsize',fontsize);      %Create pushbuttons for selecting the timescale.
     end
+    pos = [sp2, sp1, 2*(w-6*sp2)/6, ui_h];
+    obj(6) = uicontrol(fig,'style','radiobutton','string','Training Days',...
+        'units','centimeters','position',pos,'fontsize',fontsize);
     set(obj(1),'callback',{@Set_Plot_Type,obj,data});                            %Set the callback for the pop-up menu.
     set(obj(2:4),'callback',{@Plot_Timeline,obj,[],data});                       %Set the callback for the timescale buttons.
     set(obj(5),'callback',{@Export_Data,ax,obj,data});                           %Set the callback for the export button.
-    set(fig,'userdata',data);                                           %Save the plot data to the figure's 'UserData' property.
+    set(obj(6),'callback',{@TrainingDays,obj,data});
+    set(fig,'userdata',data);                                            %Save the plot data to the figure's 'UserData' property.
     Plot_Timeline(obj(2),[],obj,[],data);                                        %Call the function to plot the session data in the figure.
     set(fig,'ResizeFcn',{@Resize,ax,obj});
 end
@@ -656,26 +694,60 @@ Plot_Timeline(obj(i),[],obj,[],data);                                           
 
 %% This subfunction sorts the data into single-session values and sends it to the plot function.
 function Plot_Timeline(hObject,~,obj,fid,data)
+value = get(obj(6),'value');
+GroupValue = get(obj(7),'value');
+if GroupValue == 1 && isempty(get(obj(7),'userdata')) == 1;
+    prompt = {'# of Groups', 'Group Names'};
+    dlgtitle = 'Group Info';
+    GroupInfo = inputdlg(prompt,dlgtitle, [1 20;1 50]);
+    NumberGroups = str2double(GroupInfo{1});
+    GroupTitle = strsplit(GroupInfo{2});
+    rat_list = {data.rat};
+    for i = 1:NumberGroups;
+        Group_Selection = listdlg('PromptString',['Group: ' GroupTitle{i}],...
+            'name','Subject Assignment',...
+            'SelectionMode','multiple',...
+            'listsize',[250 250],...
+            'initialvalue',1:length(data),...
+            'uh',25,...
+            'ListString',rat_list);
+        GroupData(i).name = GroupTitle(i);
+        GroupData(i).rats = rat_list(Group_Selection);
+    end
+    set(obj(7),'userdata',GroupData);
+end
+if value == 1;
+    Training_Days_Value = 'Training';
+else
+    Training_Days_Value = 'Dates';
+end
 TrialViewerData = data;
 set(hObject,'fontweight','bold','foregroundcolor',[0 0.5 0]);               %Make this pushbutton's text bold.
 set(setdiff(obj(2:4),hObject),'fontweight','normal','foregroundcolor','k'); %Make the other pushbutton's text normal and black.
 fig = get(hObject,'parent');                                                %Grab the parent figure of the pushbutton.
 data = get(fig,'userdata');                                                 %Grab the plot data from the figure's 'UserData' property.
 i = find(hObject == obj);                                                   %Find the index of the button that called the function.
-t = unique(horzcat(data.times));                                            %Horizontally concatenate all of the timestamps.
-if i == 2                                                                   %If the user wants to plot by session...
-    t = [t; t + 0.00001]';                                                  %Set the time bounds to enclose only a single session.
-elseif i == 3                                                               %If the user wants to plot by day...
-    t = unique(fix(t));                                                     %Find the unique truncated serial date numbers.
-    t = [t; t + 1]';                                                        %Set the time bounds to go from the start of the day to the end of the day.
-else                                                                        %Otherwise, if the user wants to plot by week...
-    t = [min(fix(t)), max(fix(t))];                                         %Find the first and last timestamp.
-    i = find(strcmpi({'sun','mon','tue','wed','thu','fri','sat'},...
-        datestr(t(1),'ddd')));                                              %Find the index for the day of the week of the first timestamp.
-    t(1) = t(1) - i + 1;                                                    %Round down the timestamp to the nearest Sunday.
-    t = t(1):7:t(2);                                                        %Find the timestamps for weekly spacing.
-    t = [t; t + 7]';                                                        %Set the time bounds to go from the start of the week to the end of the week.
-end
+% if strcmpi(Training_Days_Value,'Dates') == 1;
+    t = unique(horzcat(data.times));                                            %Horizontally concatenate all of the timestamps.
+    if i == 2                                                                   %If the user wants to plot by session...
+        t = [t; t + 0.00001]';                                                  %Set the time bounds to enclose only a single session.
+    elseif i == 3                                                               %If the user wants to plot by day...
+        t = unique(fix(t));                                                     %Find the unique truncated serial date numbers.
+        t = [t; t + 1]';                                                        %Set the time bounds to go from the start of the day to the end of the day.
+    else                                                                        %Otherwise, if the user wants to plot by week...
+        t = [min(fix(t)), max(fix(t))];                                         %Find the first and last timestamp.
+        i = find(strcmpi({'sun','mon','tue','wed','thu','fri','sat'},...
+            datestr(t(1),'ddd')));                                              %Find the index for the day of the week of the first timestamp.
+        t(1) = t(1) - i + 1;                                                    %Round down the timestamp to the nearest Sunday.
+        t = t(1):7:t(2);                                                        %Find the timestamps for weekly spacing.
+        t = [t; t + 7]';                                                        %Set the time bounds to go from the start of the week to the end of the week.
+    end
+% else
+%     t = unique(horzcat(data.training_days));
+%     if i == 2
+%         t = [t; t+ 0.00001]';
+%     end
+% end
 str = get(obj(1),'string');                                                 %Grab the strings from the pop-up menu.
 i = get(obj(1),'value');                                                    %Grab the value of the pop-up menu.
 str = str{i};                                                               %Grab the selected plot type.
@@ -729,7 +801,13 @@ for r = 1:length(data)                                                      %Ste
             s{i} = data(r).stage{j};                                        %Save the last stage the rat ran on for this trime frame.            
         end
     end
-    plotdata(r).x = t(~isnan(y),:);                                         %Grab the daycodes at the start of each time frame.
+    if strcmpi(Training_Days_Value,'Dates');
+        plotdata(r).x = t(~isnan(y),:);                                         %Grab the daycodes at the start of each time frame.
+    else
+        plotdata(r).x = t(~isnan(y),:);
+        plotdata(r).x_alt = 1:1:length(t(~isnan(y),:));
+        plotdata(r).x_alt = [plotdata(r).x_alt; plotdata(r).x_alt + .2]';
+    end      
     plotdata(r).y = y(~isnan(y))';                                          %Save only the non-NaN y-coordinates.
     plotdata(r).s = s(~isnan(y))';                                          %Save the stage information for each time frame.
     plotdata(r).n = n(~isnan(y))';                                          %Save the hit rate and trial information for each time frame.
@@ -737,7 +815,7 @@ end
 ax = get(fig,'children');                                                   %Grab all children of the figure.
 ax(~strcmpi(get(ax,'type'),'axes')) = [];                                   %Kick out all non-axes objects.
 if isempty(fid)                                                             %If no text file handle was passed to this function...
-    Make_Plot(plotdata,ax,str,TrialViewerData);                                             %Call the subfunction to make the plot.
+    Make_Plot(plotdata,ax,str,TrialViewerData,obj);                                             %Call the subfunction to make the plot.
 else                                                                        %Otherwise...
     t = vertcat(plotdata.x);                                                %Vertically concatenate all time-points.
     t = unique(t,'rows');                                                   %Find all unique rows of the timepoints.
@@ -839,27 +917,69 @@ if any(strcmpi({'spreadsheet','both'},output))                              %If 
 end
 
 %% This section plots session/daily/weekly data in the specified axes.
-function Make_Plot(plotdata,ax,str,TrialViewerData)
+function Make_Plot(plotdata,ax,str,TrialViewerData,obj)
+Training_Days_Value = get(obj(6),'value');
+GroupValue = get(obj(7),'value');
+GroupData = get(obj(7),'userdata');
+if Training_Days_Value == 0;
+    Training_Days_Value = 'Dates';
+end
 fig = get(ax,'parent');                                                     %Grab the figure handle for the axes' parent.
 set(fig,'units','centimeters');                                             %Set the figure's units to centimeters.
 temp = get(fig,'position');                                                 %Grab the figure position.
 h = temp(4);                                                                %Grab the figure height, in centimeters.
-linewidth = 0.1*h;                                                          %Set the linewidth for the plots.
+linewidth = 0.07*h;                                                          %Set the linewidth for the plots.
 markersize = 0.75*h;                                                        %Set the marker size for the plots.
 fontsize = 0.6*h;                                                           %Set the fontsize for all text objects.
 cla(ax);                                                                    %Clear the axes.
-colors = hsv(length(plotdata));                                             %Grab unique colors for all the rats.
+if GroupValue == 0;
+    colors = hsv(length(plotdata));                                             %Grab unique colors for all the rats.
+else
+    colors = hsv(length(GroupData));
+end
 hoverdata = struct([]);                                                     %Create an empty structure to hold data for the MouseHover function.
 for r = 1:length(plotdata)                                                  %Step through each rat.
-    line(mean(plotdata(r).x,2),plotdata(r).y,'color',colors(r,:),...
-        'linewidth',linewidth,'userdata',1,'parent',ax);                    %Show the rat's performance as a thick line.
+    if GroupValue == 1;
+        q = 1; Counter = 1;
+        while q == 1;
+            compare = strcmpi(plotdata(r).rat,GroupData(Counter).rats);
+            if any(compare) == 1;
+                q = 0;
+            else
+                Counter = Counter + 1;
+            end
+        end
+        c = Counter;
+    else
+        c = r;
+    end
+%     c = r;
+    if strcmpi(Training_Days_Value, 'Dates') == 1;
+        line(mean(plotdata(r).x,2),plotdata(r).y,'color',colors(c,:),...
+            'linewidth',linewidth,'userdata',1,'parent',ax);                    %Show the rat's performance as a thick line.
+    else
+        line(mean(plotdata(r).x_alt,2),plotdata(r).y,'color',colors(c,:),...
+            'linewidth',linewidth,'userdata',1,'parent',ax);                    %Show the rat's performance as a thick line.
+    end
     for i = 1:size(plotdata(r).x,1)                                         %Step through each timepoint.
-        l = line(mean(plotdata(r).x(i,:)),plotdata(r).y(i),...
-            'markeredgecolor',colors(r,:),'linestyle','none',...
-            'markerfacecolor',colors(r,:),'marker','.',...
-            'linewidth',linewidth,'markersize',markersize,'userdata',2,...
-            'parent',ax, 'ButtonDownFcn', {@TrialViewer,plotdata(r),i,TrialViewerData});                                                   %Mark each session with a unique marker.        
-        hoverdata(end+1).xy = [mean(plotdata(r).x(i,:)),plotdata(r).y(i)];  %Save the x- and y-coordinates.
+        if strcmpi(Training_Days_Value,'Dates') == 1;
+            l(i) = line(mean(plotdata(r).x(i,:)),plotdata(r).y(i),...
+                'markeredgecolor',colors(c,:),'linestyle','none',...
+                'markerfacecolor',colors(c,:),'marker','.',...
+                'linewidth',linewidth,'markersize',markersize,'userdata',2,...
+                'parent',ax, 'ButtonDownFcn', {@TrialViewer,plotdata(r),i,TrialViewerData});                                                   %Mark each session with a unique marker.
+        else
+            l(i) = line(mean(plotdata(r).x_alt(i,:)),plotdata(r).y(i),...
+                'markeredgecolor',colors(c,:),'linestyle','none',...
+                'markerfacecolor',colors(c,:),'marker','.',...
+                'linewidth',linewidth,'markersize',markersize,'userdata',2,...
+                'parent',ax, 'ButtonDownFcn', {@TrialViewer,plotdata(r),i,TrialViewerData});
+        end
+        if strcmpi(Training_Days_Value,'Dates') == 1;
+            hoverdata(end+1).xy = [mean(plotdata(r).x(i,:)),plotdata(r).y(i)];  %Save the x- and y-coordinates.
+        else
+            hoverdata(end+1).xy = [mean(plotdata(r).x_alt(i,:)),plotdata(r).y(i)];  %Save the x- and y-coordinates.
+        end
         if rem(plotdata(r).x(i,1),1) ~= 0                                   %If the timestamp is a fractional number of days...
             temp = datestr(plotdata(r).x(i,1),'mm/dd/yyyy, HH:MM');         %Show the date and the time.
         elseif plotdata(r).x(i,2) - plotdata(r).x(i,1) == 1                 %If the timestamps only cover one day...
@@ -873,9 +993,15 @@ for r = 1:length(plotdata)                                                  %Ste
         hoverdata(end).handles = l;                                         %Save the line handle for the point.
     end
 end
-temp = vertcat(hoverdata.xy);                                               %Grab all of the datapoint coordinates.
-x = [min(temp(:,1)), max(temp(:,1))];                                       %Find the minimim and maximum x-values.
-x = x + [-0.05,0.05]*(x(2) - x(1));                                         %Add some padding to the x-axis limits.
+if strcmpi(Training_Days_Value,'Dates') == 1;
+    temp = vertcat(hoverdata.xy);                                               %Grab all of the datapoint coordinates.
+    x = [min(temp(:,1)), max(temp(:,1))];                                       %Find the minimim and maximum x-values.
+    x = x + [-0.05,0.05]*(x(2) - x(1));                                         %Add some padding to the x-axis limits.
+else
+    temp = vertcat(plotdata.x_alt);
+    x = [min(temp(:,1)), max(temp(:,1))];
+    x = x + [-.05,.05]*(x(2) - x(1));
+end
 if length(x) < 2 || any(isnan(x))                                           %If there are any missing x values.
     x = now + [-1,1];                                                       %Set arbitrary x-axis limits.
 end
@@ -883,18 +1009,44 @@ if x(1) == x(2)                                                             %If 
     x = x + [-1,1];                                                         %Add a day to each side of the single point.
 end
 xlim(ax,x);                                                                 %Set the x-axis limits.
-y = [min(temp(:,2)), max(temp(:,2))];                                       %Find the minimim and maximum x-values.
-y = y + [-0.05,0.05]*(y(2) - y(1));                                         %Add some padding to the y-axis limits.
+if strcmpi(Training_Days_Value,'Dates') == 1;
+    y = [min(temp(:,2)), max(temp(:,2))];                                       %Find the minimim and maximum x-values.
+    y = y + [-0.05,0.05]*(y(2) - y(1));                                         %Add some padding to the y-axis limits.
+else
+    temp = vertcat(plotdata.y);
+    y = [min(temp(:,1)), max(temp(:,1))];
+    y = y + [-0.05,0.05]*(y(2) - y(1));
+end
 if length(y) < 2 || any(isnan(y))                                           %If there are any missing y values.
     y = [0,1];                                                              %Set arbitrary y-axis limits.
 end
 if y(1) == y(2)                                                             %If the y-axis limits are the same...
     y = y + [-0.1, 0.1];                                                    %Add 0.1 to each side of the single point.
 end
-ylim(ax,y);                                                                 %Set the y-axis limits.
-set(ax,'xticklabel',datestr(get(ax,'xtick'),'mm/dd'),...
+ylim(ax,y);                                                                 %Set the y-axis limits
+if strcmpi(Training_Days_Value,'Dates') == 1;
+    XTickLabelTemp = datestr(get(ax,'xtick'),'mm/dd');
+else
+    XTickLabelTemp = get(ax,'xtick');
+end
+set(ax,'xticklabel',XTickLabelTemp,...
     'fontsize',fontsize,'fontweight','bold','linewidth',linewidth);         %Show the date for each x-axis tick.
 ylabel(ax,str,'fontweight','bold','fontsize',1.1*fontsize);                 %Label the x-axis.
+if GroupValue == 1;
+    for i = 1:length(GroupData);
+        legendnames(i) = GroupData(i).name;
+    end
+    [legh,objh,outh,outm] = legend(legendnames,'Location','southeast');
+%     lineh = findobj(objh,'type','line');
+    texth = findobj(objh,'type','text');
+    set(outh,'Linestyle','-','Marker','none','Linewidth',1);
+    set(texth,'Fontsize',10, 'Fontweight', 'normal');
+    set(legh,'Fontsize', 12);
+%     lineh = findobj(lineh,'Marker','none');
+    
+else
+    legend('hide')
+end
 temp = get(ax,'ytick');                                                     %Grab the y-axis ticks.
 for i = 1:length(temp)                                                      %Step through the y-axis ticks.
     temp(i) = line(xlim(ax),temp(i)*[1,1],'color',[0.75 0.75 0.75],...
@@ -984,7 +1136,9 @@ for i = 2:5                                                                 %Ste
 end
 pos = [sp2, sp1, 2*(w-6*sp2)/6, ui_h];
 set(obj(6),'units','centimeters','position',pos,'fontsize',fontsize);
-linewidth = 0.1*h;                                                          %Set the linewidth for the plots.
+pos = [30*sp2, sp1, 2*(w-6*sp2)/6, ui_h];
+set(obj(7),'units','centimeters','position',pos,'fontsize',fontsize);
+linewidth = 0.07*h;                                                          %Set the linewidth for the plots.
 markersize = 0.75*h;                                                        %Set the marker size for the plots.
 fontsize = 0.6*h;                                                           %Set the fontsize for all text objects.
 obj = get(ax,'children');                                                   %Grab all children of the axes.
