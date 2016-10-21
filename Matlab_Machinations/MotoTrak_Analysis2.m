@@ -484,7 +484,7 @@ for d = 1:length(devices)                                                   %Ste
                         'units','centimeters','position',pos,'fontsize',fontsize);      %Create pushbuttons for selecting the timescale.
                 end
                 pos = [sp2, sp1, 2*(w-6*sp2)/6, ui_h];  
-                obj(6) = uicontrol(fig,'style','radiobutton','string','Training Days',...
+                obj(6) = uicontrol(fig,'style','radiobutton','string','Concatenate Dates',...
                     'units','centimeters','position',pos,'fontsize',fontsize);
                 pos = [30*sp2, sp1, 2*(w-6*sp2)/6, ui_h];
                 obj(7) = uicontrol(fig,'style','radiobutton','string','Group Animals',...
@@ -609,7 +609,7 @@ for d = 1:length(devices)
                         'units','centimeters','position',pos,'fontsize',fontsize);      %Create pushbuttons for selecting the timescale.
                 end
                 pos = [sp2, sp1, 2*(w-6*sp2)/6, ui_h]; 
-                obj(6) = uicontrol(fig,'style','radiobutton','string','Training Days',...
+                obj(6) = uicontrol(fig,'style','radiobutton','string','Concatenate Dates',...
                     'units','centimeters','position',pos,'fontsize',fontsize);
                 pos = [30*sp2, sp1, 2*(w-6*sp2)/6, ui_h];
                 obj(7) = uicontrol(fig,'style','radiobutton','string','Group Animals',...
@@ -875,6 +875,7 @@ if any(strcmpi({'image','both'},output))                                    %If 
     sp1 = 0.02*h;                                                           %Set the vertical spacing between axes and uicontrols.
     sp2 = 0.01*w;                                                           %Set the horizontal spacing between axes and uicontrols.
     pos = [7*sp2,3*sp1,w-8*sp2,h-4*sp1];                                    %Create an axes position matrix.
+    
     set(ax,'units','centimeters','position',pos);                           %Expand the axes to fill the figure.
     set(obj,'visible','off');                                               %Make all of the other figures invisible.
     drawnow;                                                                %Immediately update the figure.    
@@ -887,7 +888,8 @@ if any(strcmpi({'image','both'},output))                                    %If 
     elseif strcmpi(ext,'.pdf')                                              %If the user chose to save as a PDF...
         print(fig,[path file(1:a-1)],'-dpdf');                              %Save the figure as a PDF file.
     end
-    pos = [7*sp2,3*sp1,w-8*sp2,h-ui_h-5*sp1];                               %Create an axes position matrix.
+%     pos = [7*sp2,3*sp1,w-8*sp2,h-ui_h-5*sp1];                               %Create an axes position matrix.
+pos = [7*sp2,7*sp1,w-8*sp2,h-ui_h-10*sp1]; 
     set(ax,'units','centimeters','position',pos);                           %Reset the position of the axes.
     set(obj,'visible','on');                                                %Make all of the other figures visible again.
     i = strcmpi(get(obj,'fontweight'),'bold');                              %Find the pushbutton with the bold fontweight.
@@ -1041,7 +1043,7 @@ if GroupValue == 1;
     texth = findobj(objh,'type','text');
     set(outh,'Linestyle','-','Marker','none','Linewidth',1);
     set(texth,'Fontsize',10, 'Fontweight', 'normal');
-    set(legh,'Fontsize', 12);
+    set(legh,'Fontsize', 14);
 %     lineh = findobj(lineh,'Marker','none');
     
 else
