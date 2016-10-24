@@ -1,4 +1,11 @@
 function Knob_Analysis_Suite(varargin)
+if ~exist('.git')
+    path = 'cd C:\Desktop';
+    cmd = [path...
+        '& git clone https://github.com/sdb31/Knob_Analysis_Software.git'];
+    [~,result] = system(cmd);
+    msgbox(result,'Clone Status')
+end
 set(0,'units','centimeters');
 pos = get(0,'screensize');
 h = 0.4*pos(4);
