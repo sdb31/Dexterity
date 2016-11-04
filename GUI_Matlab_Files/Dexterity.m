@@ -2,7 +2,7 @@ function Dexterity(varargin)
 if ~exist('.git')
     path = 'cd C:\Desktop';
     cmd = [path...
-        '& git clone https://github.com/sdb31/Knob_Analysis_Software.git'];
+        '& git clone https://github.com/sdb31/Dexterity.git'];
     [~,result] = system(cmd);
     msgbox(result,'Clone Status')
 end
@@ -52,7 +52,7 @@ PushPath = uigetdir('C:\','Select folder you want to push');
 PushPathCMD = ['cd ' PushPath];
 cmd = [PushPathCMD...
     '& git status'...
-    '& git commit -am "New Config File"'...
+    '& git commit -am "New Lab Added"'...
     '& git push'];
 [~,result] = system(cmd);
 msgbox(result,'Push Status')
