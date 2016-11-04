@@ -84,8 +84,6 @@ guidata(handles.fig,handles);
 end
 
 function LabAnalysis(~,~)
-% Table = readtable('LabSpecificAnalysisConfig.txt');
-% Path = Table{:,2};
 datapath = 'C:\KnobAnalysis\Lab_Specific_Config_Files\';                                         %Set the primary local data path for saving data files.
 if ~exist(datapath,'dir')                                           %If the primary local data path doesn't already exist...
     mkdir(datapath);                                                %Make the primary local data path.
@@ -94,19 +92,17 @@ masterdatapath = 'C:\KnobAnalysis\Master_Lab_Specific_Config\';
 if ~exist(masterdatapath,'dir');
     mkdir(masterdatapath);
 end
-% cd(datapath);
+
 Info = dir(datapath);
 if length(Info) < 3
     Load_or_Create = questdlg('Would you like to load a config file or add a new lab?',...
-        'Load Config or Add Lab',...
-        'Load Config', 'Add Lab', 'Cancel');
+        'Load Existing or Add Lab',...
+        'Load Existing', 'Add Lab', 'Cancel');
     switch Load_or_Create
         case 'Add Lab'
             Lab_Name = inputdlg('What is the name of the lab?', 'Lab Name', [1 50]);
-%             Lab_NameNS = char(Lab_Name); Lab_NameNS = Lab_NameNS(Lab_NameNS~=' ');
             functionspath = uigetdir('C:\', 'Where are your lab''s functions located?');
-            cd(functionspath); %temp_info = dir(functionspath); %temp_names = {temp_info.name};
-            %             temp_names = temp_names(3:end);
+%             cd(functionspath); 
             temp_directory = [char(datapath) char(Lab_Name) '\']; mkdir(temp_directory);
             functionspath = [functionspath '\'];
             [Success,Message,MessageID] = copyfile(functionspath,temp_directory);
@@ -115,59 +111,37 @@ if length(Info) < 3
             if length(Repo_Labs)<3
                 source = ['C:\KnobAnalysis\Lab_Specific_Config_Files\' char(Lab_Name)];
                 Lab_Analyses_Repository = [Lab_Analyses_Repository char(Lab_Name)];
-                mkdir(Lab_Analyses_Repository); cd(Lab_Analyses_Repository);
+                mkdir(Lab_Analyses_Repository); %cd(Lab_Analyses_Repository);
                 [Success,Message,MessageID] = copyfile(source,Lab_Analyses_Repository);
             else
                 BoolCompare = strcmpi(Lab_Name,Repo_Labs);
                 if any(BoolCompare) == 0;
                     source = ['C:\KnobAnalysis\Lab_Specific_Config_Files\' char(Lab_Name)];
                     Lab_Analyses_Repository = [Lab_Analyses_Repository char(Lab_Name)];
-                    mkdir(Lab_Analyses_Repository); cd(Lab_Analyses_Repository);
+                    mkdir(Lab_Analyses_Repository); %cd(Lab_Analyses_Repository);
                     [Success,Message,MessageID] = copyfile(source,Lab_Analyses_Repository);
                 end
             end
-%             ConfigFileName = [Lab_NameNS 'Config.mat'];
-%             config.Lab_Name = Lab_Name; config.path = functionspath;
-%             functionspath = [functionspath '\']; cd(functionspath); FctInfo = dir(functionspath);
-%             FctInfo = {FctInfo.name}; FctInfo = FctInfo(3:end);
-%             config.function_names = FctInfo;
-%             cd(datapath);
-%             configfolderpath = uigetdir('C:\','Where are KnobAnalysis config files located?');
-%             %config.masterconfigpath = configfolderpath;
-%             save(ConfigFileName, 'config');
-%             cd(configfolderpath); Info = dir(configfolderpath); ConfigNames = {Info.name};
-%             BoolCompare = strcmpi(ConfigFileName,ConfigNames);
-%             datapath = [datapath ConfigFileName];
-%             if any(BoolCompare) == 0;
-%                 [Success,Message,MessageID] = copyfile(datapath,configfolderpath);
-%             end
-%             MasterConfigFileName = 'MasterConfig.mat'; cd(masterdatapath); save(MasterConfigFileName,'configfolderpath');
-        case 'Load Config'
-            configfolderpath = uigetdir('C:\','Where are Dexterity config files located?');
-            MasterConfigFileName = 'MasterConfig.mat'; cd(masterdatapath); save(MasterConfigFileName,'configfolderpath');
-            [FileName,PathName] = uigetfile('*.mat','Select the configuration file');
-            datapath = 'C:\KnobAnalysis\Lab_Specific_Config_Files\';
-            olddatapath = [PathName FileName];
-            copyfile(olddatapath,datapath); %cd(datapath);
-%             load(FileName);
+        case 'Load Existing'
+            Lab_Analyses_Repository = [getenv('homedrive') getenv('homepath') filesep 'Desktop' filesep 'Knob_Analysis_Software' filesep 'LabSpecificAnalyses' filesep];
+            configfolderpath = uigetdir(Lab_Analyses_Repository,'Please select the lab folder where functions are located');
+            temp_lab_name = find(configfolderpath == filesep);
+            temp_lab_name = configfolderpath(temp_lab_name(end)+1:end); new_folder = ['C:\KnobAnalysis\Lab_Specific_Config_Files\' temp_lab_name];
+            mkdir(new_folder); 
+            [Success,Message,MessageID] = copyfile(configfolderpath,new_folder);
     end
 end
-cd(datapath);
 Info = dir(datapath); LabNames = {Info.name}; LabNames = LabNames(3:end);
 for i = 1:length(LabNames);
     temp_lab_directory = [datapath char(LabNames(i))];
     temp_filenames = dir(temp_lab_directory); temp_filenames = {temp_filenames.name};
     temp_filenames = temp_filenames(3:end);
-%         load(LabNames{i})
-%     LabNames(i) = config.Lab_Name;
     FileInfo(i).functions = temp_filenames;
     FileInfo(i).lab_directory = {temp_lab_directory};
 end
-% load(FileNames{1}); Lab_Name = config.Lab_Name; Functions = config.function_names;
 pos = get(0,'Screensize');                                              %Grab the screensize.
 h = 9;                                                                 %Set the height of the figure, in centimeters.
 w = 15;                                                                 %Set the width of the figure, in centimeters.
-% FileNames = {};
 fig = figure('numbertitle','off','units','centimeters',...
     'name','Dexterity: Labs','menubar','none',...
     'position',[pos(3)/2-w/2, pos(4)/2-h/2, w, h]);
@@ -189,32 +163,29 @@ MoreLabs = uicontrol('Parent',fig,'Style','pushbutton','string','Add New Lab',..
 ConfigFile = uicontrol('Parent',fig,'Style','pushbutton','string','Load Existing Lab',...
     'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.55 .05 .3 .15],...
     'Fontsize', 12, 'Fontweight', 'bold') ;
-% Push = uicontrol('Parent',fig,'Style','pushbutton','string','Push',...
-%     'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.65 .05 .1 .15],...
-%     'Fontsize', 12, 'Fontweight', 'bold') ;
-% Pull = uicontrol('Parent',fig,'Style','pushbutton','string','Pull',...
-%     'HorizontalAlignment', 'left', 'units', 'normalized', 'Position', [.8 .05 .1 .15],...
-%     'Fontsize', 12, 'Fontweight', 'bold') ;
 set(MoreLabs,'callback',{@AddNewLab,Analysis_Type,Lab_Name});
-set(ConfigFile,'callback',{@LoadConfigFile,Lab_Name});
+set(ConfigFile,'callback',{@LoadConfigFile,Lab_Name,Analysis_Type});
 set(Analysis_Type,'callback',{@AnalysisType,Lab_Name});
 end
 
-function LoadConfigFile(~,~,Lab_Name)
-% datapath = 'C:\';
-[FileName,PathName] = uigetfile('*.mat','Select the configuration file');
-datapath = 'C:\KnobAnalysis\Lab_Specific_Config_Files\';
-olddatapath = [PathName FileName];
-copyfile(olddatapath,datapath); cd(datapath);
-load(FileName); 
-
-% masterdatapath = 'C:\KnobAnalysis\Master_Lab_Specific_Config\';
-% cd(masterdatapath); load('MasterConfig.mat'); 
-New_Lab_Name = config.Lab_Name; %NewFunctions = config.function_names;
-LabNames = get(Lab_Name,'string'); LabNames(length(LabNames)+1) = New_Lab_Name;
+function LoadConfigFile(~,~,Lab_Name,Analysis_Type)
+Lab_Analyses_Repository = [getenv('homedrive') getenv('homepath') filesep 'Desktop' filesep 'Knob_Analysis_Software' filesep 'LabSpecificAnalyses' filesep];
+configfolderpath = uigetdir(Lab_Analyses_Repository,'Please select the lab folder where functions are located');
+temp_lab_name = find(configfolderpath == filesep);
+temp_lab_name = configfolderpath(temp_lab_name(end)+1:end); new_folder = ['C:\KnobAnalysis\Lab_Specific_Config_Files\' temp_lab_name];
+mkdir(new_folder);
+[Success,Message,MessageID] = copyfile(configfolderpath,new_folder);
+datapath = 'C:\KnobAnalysis\Lab_Specific_Config_Files\';  
+Info = dir(datapath); LabNames = {Info.name}; LabNames = LabNames(3:end);
+for i = 1:length(LabNames);
+    temp_lab_directory = [datapath char(LabNames(i))];
+    temp_filenames = dir(temp_lab_directory); temp_filenames = {temp_filenames.name};
+    temp_filenames = temp_filenames(3:end);
+    FileInfo(i).functions = temp_filenames;
+    FileInfo(i).lab_directory = {temp_lab_directory};
+end
+set(Analysis_Type,'userdata',FileInfo);
 set(Lab_Name,'string',LabNames);
-% set(Analysis_Type,'string',Functions);
-% set(Lab_Name,'string',LabName);
 end
 
 function AddNewLab(~,~,Analysis_Type,lab_name)
@@ -222,73 +193,42 @@ datapath = 'C:\KnobAnalysis\Lab_Specific_Config_Files\';                        
 if ~exist(datapath,'dir')                                           %If the primary local data path doesn't already exist...
     mkdir(datapath);                                                %Make the primary local data path.
 end
-% masterdatapath = 'C:\KnobAnalysis\Master_Lab_Specific_Config\';
-% cd(masterdatapath); load('MasterConfig.mat');
 Lab_Name = inputdlg('What is the name of the lab?', 'Lab Name', [1 50]);
-% Lab_NameNS = char(Lab_Name); Lab_NameNS = Lab_NameNS(Lab_NameNS~=' ');
 functionspath = uigetdir('C:\', 'Where are your lab''s functions located?');
-cd(functionspath); %temp_info = dir(functionspath); %temp_names = {temp_info.name};
-% temp_names = temp_names(3:end);
 temp_directory = [char(datapath) char(Lab_Name) '\']; mkdir(temp_directory);
 functionspath = [functionspath '\'];
 [Success,Message,MessageID] = copyfile(functionspath,temp_directory);
-cd(datapath);
 Info = dir(datapath); LabNames = {Info.name}; LabNames = LabNames(3:end);
 for i = 1:length(LabNames);
     temp_lab_directory = [datapath char(LabNames(i))];
     temp_filenames = dir(temp_lab_directory); temp_filenames = {temp_filenames.name};
     temp_filenames = temp_filenames(3:end);
-%         load(LabNames{i})
-%     LabNames(i) = config.Lab_Name;
     FileInfo(i).functions = temp_filenames;
     FileInfo(i).lab_directory = {temp_lab_directory};
 end
 set(Analysis_Type,'userdata',FileInfo);
-% New_Lab_Name = inputdlg('What is the name of the lab?', 'Lab Name', [1 50]);
-% Lab_NameNS = char(New_Lab_Name); Lab_NameNS = Lab_NameNS(Lab_NameNS~=' ');
-% functionspath = uigetdir('C:\', 'Where are your lab''s functions located?');
-% ConfigFileName = [Lab_NameNS 'Config.mat'];
-% config.Lab_Name = New_Lab_Name; config.path = functionspath;
-% functionspath = [functionspath '\']; cd(functionspath); FctInfo = dir(functionspath);
-% FctInfo = {FctInfo.name}; FctInfo = FctInfo(3:end);
-% config.function_names = FctInfo;
-% cd(datapath); save(ConfigFileName, 'config');
-% LabNames = get(Lab_Name,'string'); LabNames(length(LabNames)+1) = New_Lab_Name;
 set(lab_name,'string',LabNames);
 Lab_Analyses_Repository = [getenv('homedrive') getenv('homepath') filesep 'Desktop' filesep 'Knob_Analysis_Software' filesep 'LabSpecificAnalyses' filesep];
 Info = dir(Lab_Analyses_Repository); Repo_Labs = {Info.name}; 
 if length(Repo_Labs)<3
     source = ['C:\KnobAnalysis\Lab_Specific_Config_Files\' char(Lab_Name)];
     Lab_Analyses_Repository = [Lab_Analyses_Repository char(Lab_Name)];
-    mkdir(Lab_Analyses_Repository); cd(Lab_Analyses_Repository);
+    mkdir(Lab_Analyses_Repository); %cd(Lab_Analyses_Repository);
     [Success,Message,MessageID] = copyfile(source,Lab_Analyses_Repository);
 else
     BoolCompare = strcmpi(Lab_Name,Repo_Labs);
     if any(BoolCompare) == 0;
         source = ['C:\KnobAnalysis\Lab_Specific_Config_Files\' char(Lab_Name)];
         Lab_Analyses_Repository = [Lab_Analyses_Repository char(Lab_Name)];
-        mkdir(Lab_Analyses_Repository); cd(Lab_Analyses_Repository);
+        mkdir(Lab_Analyses_Repository); %cd(Lab_Analyses_Repository);
         [Success,Message,MessageID] = copyfile(source,Lab_Analyses_Repository);
     end
 end
-% Repo_Labs = (3:end);
-% cd(configfolderpath); Info = dir(configfolderpath); ConfigNames = {Info.name};
-% BoolCompare = strcmpi(ConfigFileName,ConfigNames);
-% datapath = [datapath ConfigFileName];
-% if any(BoolCompare) == 0;
-%     [Success,Message,MessageID] = copyfile(datapath,configfolderpath);
-% end
 end
 
 function LabName(hObject,~,Analysis_Type)
 index_selected = get(hObject,'value'); FileInfo = get(Analysis_Type,'userdata');
 set(Analysis_Type,'value',1);
-% string_selected = get(hObject,'string'); string_selected = string_selected(index_selected);
-% string_selected = char(string_selected);
-% string_selected = string_selected(string_selected ~= ' ');
-% configfile = [string_selected 'Config.mat'];
-% load(configfile);
-% Lab_Name = config.Lab_Name; Functions = config.function_names;
 Functions = FileInfo(index_selected).functions;
 set(Analysis_Type,'string',Functions);
 end
@@ -303,8 +243,6 @@ Active_Function = [char(FileInfo(Lab_Selected).lab_directory) '\' Current_Select
 try
     run(Active_Function)
 catch ME
-%     set(hObject,'value',index_selected-1);
     return    
 end
-% set(hObject,'value',index_selected-1);
 end
