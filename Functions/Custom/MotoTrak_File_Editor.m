@@ -160,9 +160,9 @@ else                                                                        %Oth
     handles.oldfile = 'temp.ArdyMotor';                                     %Use the new temporary file as the old filename.
 end
 
-waitbar = big_waitbar('title','Saving File Edits...',...
-    'string',['Saving to: ' handles.file],'color','m');                     %Create a waitbar figure.
-waitbar.value(0);                                                           %Set the waitbar value to zero.
+% waitbar = big_waitbar('title','Saving File Edits...',...
+%     'string',['Saving to: ' handles.file],'color','m');                     %Create a waitbar figure.
+% waitbar.value(0);                                                           %Set the waitbar value to zero.
 
 a = find(handles.path == '\');                                              %Find all forward slashes in the new path.
 for i = a                                                                   %Step through all forward slashes.
@@ -201,7 +201,7 @@ temp = fread(oldfid,1,'int8');                                              %Gra
 while ~isempty(temp)                                                        %Loop until there's no more bytes in the original file.
     counter = counter + 0.0001;                                             %Add 0.0001 to the counter.
     if rem(counter,0.01) == 0                                               %If the counter is at an even hundredth...
-        waitbar.value(counter);                                             %Update the waitbar value.
+%         waitbar.value(counter);                                             %Update the waitbar value.
     end
     if counter >= 1                                                         %If the counter value is greater than or equal to 1...
         counter = 0;                                                        %Reset the counter to zero.
@@ -211,9 +211,9 @@ while ~isempty(temp)                                                        %Loo
 end
 while counter < 1;                                                          %Loop until the counter is greater than 1...
     counter = counter + 0.01;                                               %Add 0.01 to the counter.
-    waitbar.value(counter);                                                 %Update the waitbar value.
+%     waitbar.value(counter);                                                 %Update the waitbar value.
 end
-waitbar.close();                                                            %Close the waitbar.
+% waitbar.close();                                                            %Close the waitbar.
 fclose(oldfid);                                                             %Close the original file.
 fclose(newfid);                                                             %Close the new file.
 if delete_original == 1                                                     %If the user selected to delete the original file...
