@@ -1206,63 +1206,78 @@ ax(~strcmpi(get(ax,'type'),'axes')) = [];                                   %Kic
 if isempty(fid)                                                             %If no text file handle was passed to this function...
     Make_Plot(plotdata,ax,str,TrialViewerData);                                             %Call the subfunction to make the plot.
 else                                                                        %Otherwise...
-    fprintf(fid,'%s,\t','Experiment Name:');
-    fprintf(fid,'%s,\n',TimelineData(index_selected).ExpName{:});
-    fprintf(fid,'%s,\t','Groups:');
-    for g = 1:length(TimelineData(index_selected).Groups)
-        if g == length(TimelineData(index_selected).Groups);
-            fprintf(fid,'%s,\n\n',TimelineData(index_selected).Groups(g).name{:});
-        else
-            fprintf(fid,'%s,\t',TimelineData(index_selected).Groups(g).name{:});
-        end
-    end
-    for g = 1:length(TimelineData(index_selected).Groups)
-        fprintf(fid,'%s Subjects,\t',TimelineData(index_selected).Groups(g).name{:});
-        for s = 1:length(TimelineData(index_selected).Groups(g).Subjects);
-            if s == length(TimelineData(index_selected).Groups(g).Subjects);
-                fprintf(fid,'%s,\n',TimelineData(index_selected).Groups(g).Subjects{s});
-            else
-                fprintf(fid,'%s,\t',TimelineData(index_selected).Groups(g).Subjects{s});
-            end
-        end
-    end
-    fprintf(fid,'\n%s\n',str);
-    for g = 1:length(TimelineData(index_selected).Groups)
-        if g == length(TimelineData(index_selected).Groups);
-            fprintf(fid,'%s,\n',TimelineData(index_selected).Groups(g).name{:});
-        else
-            fprintf(fid,'%s,\t',TimelineData(index_selected).Groups(g).name{:});
-        end
-    end
-    for d = 1:length(CSV_Data);
-        for g = 1:length(TimelineData(index_selected).Groups)
-            if g == length(TimelineData(index_selected).Groups)
-                fprintf(fid,'%f,\n',CSV_Data(g,d));
-            else
-                fprintf(fid,'%f,\t',CSV_Data(g,d));
-            end
-        end
-    end
-    fprintf(fid,'\n%s','Group Data');
+    [file, path] = uiputfile('*.xls','Save Spreadsheet');
+    filename = [path file];
     for d = 1:length(TimelineData(index_selected).Groups);
-       fprintf(fid,'\n%s\n',TimelineData(index_selected).Groups(d).name{:});
-       for g = 1:length(TimelineData(index_selected).Groups(d).Subjects);
-           if g == length(TimelineData(index_selected).Groups(d).Subjects);
-               fprintf(fid,'%s,\n',TimelineData(index_selected).Groups(d).Subjects{g});
-           else
-               fprintf(fid,'%s,\t',TimelineData(index_selected).Groups(d).Subjects{g});
-           end
-       end
-       for i = 1:length(GroupInfo(d).data);
-           for g = 1:length(TimelineData(index_selected).Groups(d).Subjects);
-               if g == length(TimelineData(index_selected).Groups(d).Subjects);
-                   fprintf(fid,'%f,\n',GroupInfo(d).data(g,i));
-               else
-                   fprintf(fid,'%f,\t',GroupInfo(d).data(g,i));
-               end
-           end
-       end
+        xlswrite(filename, {'Experiment Name:'},d,'A1');
+        xlswrite(filename, TimelineData(index_selected).ExpName,d,'B1');
+        xlswrite(filename,{'Groups:'},d,'A2');
+        xlswrite(filename,GroupNames,d,'B2');
+        xlswrite(filename,{'Group Name:'},d,'A4')
+        xlswrite(filename,GroupNames(d),d,'B4');
+        xlswrite(filename,TimelineData(index_selected).Groups(d).Subjects,d,'A5');
+        xlswrite(filename,GroupInfo(d).data',d,'A6');
     end
+%     fopen(filename);
+winopen(filename)
+%     msgbox('Done!');
+%     fprintf(fid,'%s,\t','Experiment Name:');
+%     fprintf(fid,'%s,\n',TimelineData(index_selected).ExpName{:});
+%     fprintf(fid,'%s,\t','Groups:');
+%     for g = 1:length(TimelineData(index_selected).Groups)
+%         if g == length(TimelineData(index_selected).Groups);
+%             fprintf(fid,'%s,\n\n',TimelineData(index_selected).Groups(g).name{:});
+%         else
+%             fprintf(fid,'%s,\t',TimelineData(index_selected).Groups(g).name{:});
+%         end
+%     end
+%     for g = 1:length(TimelineData(index_selected).Groups)
+%         fprintf(fid,'%s Subjects,\t',TimelineData(index_selected).Groups(g).name{:});
+%         for s = 1:length(TimelineData(index_selected).Groups(g).Subjects);
+%             if s == length(TimelineData(index_selected).Groups(g).Subjects);
+%                 fprintf(fid,'%s,\n',TimelineData(index_selected).Groups(g).Subjects{s});
+%             else
+%                 fprintf(fid,'%s,\t',TimelineData(index_selected).Groups(g).Subjects{s});
+%             end
+%         end
+%     end
+%     fprintf(fid,'\n%s\n',str);
+%     for g = 1:length(TimelineData(index_selected).Groups)
+%         if g == length(TimelineData(index_selected).Groups);
+%             fprintf(fid,'%s,\n',TimelineData(index_selected).Groups(g).name{:});
+%         else
+%             fprintf(fid,'%s,\t',TimelineData(index_selected).Groups(g).name{:});
+%         end
+%     end
+%     for d = 1:length(CSV_Data);
+%         for g = 1:length(TimelineData(index_selected).Groups)
+%             if g == length(TimelineData(index_selected).Groups)
+%                 fprintf(fid,'%f,\n',CSV_Data(g,d));
+%             else
+%                 fprintf(fid,'%f,\t',CSV_Data(g,d));
+%             end
+%         end
+%     end
+%     fprintf(fid,'\n%s','Group Data');
+%     for d = 1:length(TimelineData(index_selected).Groups);
+%         fprintf(fid,'\n%s\n',TimelineData(index_selected).Groups(d).name{:});
+%         for g = 1:length(TimelineData(index_selected).Groups(d).Subjects);
+%             if g == length(TimelineData(index_selected).Groups(d).Subjects);
+%                 fprintf(fid,'%s,\n',TimelineData(index_selected).Groups(d).Subjects{g});
+%             else
+%                 fprintf(fid,'%s,\t',TimelineData(index_selected).Groups(d).Subjects{g});
+%             end
+%         end
+%         for i = 1:size(GroupInfo(d).data,2);
+%             for g = 1:length(TimelineData(index_selected).Groups(d).Subjects);
+%                 if g == length(TimelineData(index_selected).Groups(d).Subjects);
+%                     fprintf(fid,'%d,\n',GroupInfo(d).data(g,i));
+%                 else
+%                     fprintf(fid,'%d,\t',GroupInfo(d).data(g,i));
+%                 end
+%             end
+%         end
+%     end
 end
 
 %% This subfunction sorts the data into daily values and sends it to the plot function.
@@ -1317,24 +1332,25 @@ if any(strcmpi({'image','both'},output))                                    %If 
     drawnow;                                                                %Immediately update the figure.    
 end
 if any(strcmpi({'spreadsheet','both'},output))                              %If the user wants to save a spreadsheet...
-    temp = get(ax,'ylabel');                                                %Grab the handle for the axes y-label.
-    file = lower(get(temp,'string'));                                       %Grab the axes y-axis label.
-    file(file == ' ') = '_';                                                %Replace any spaces with underscores.
-    for i = '<>:"/\|?*().'                                                  %Step through all reserved characters.
-        file(file == i) = [];                                               %Kick out any reserved characters.
-    end
-    file = [file '_' datestr(now,'yyyymmdd')];                              %Add today's date to the default filename.
-    temp = lower(get(fig,'name'));                                          %Grab the figure name.
-    file = [temp(20:end) '_' file];                                         %Add the device name to the default filename.
-    [file, path] = uiputfile('*.csv','Save Spreadsheet',file);              %Ask the user for a filename.
-    if file(1) == 0                                                         %If the user clicked cancel...
-        return                                                              %Skip execution of the rest of the function.
-    end
-    fid = fopen([path file],'wt');                                          %Open a new text file to write the data to.   
+%     temp = get(ax,'ylabel');                                                %Grab the handle for the axes y-label.
+%     file = lower(get(temp,'string'));                                       %Grab the axes y-axis label.
+%     file(file == ' ') = '_';                                                %Replace any spaces with underscores.
+%     for i = '<>:"/\|?*().'                                                  %Step through all reserved characters.
+%         file(file == i) = [];                                               %Kick out any reserved characters.
+%     end
+%     file = [file '_' datestr(now,'yyyymmdd')];                              %Add today's date to the default filename.
+%     temp = lower(get(fig,'name'));                                          %Grab the figure name.
+%     file = [temp(20:end) '_' file];                                         %Add the device name to the default filename.
+%     [file, path] = uiputfile('*.xls','Save Spreadsheet',file);              %Ask the user for a filename.
+%     if file(1) == 0                                                         %If the user clicked cancel...
+%         return                                                              %Skip execution of the rest of the function.
+%     end
+%     fid = fopen([path file],'wt');                                          %Open a new text file to write the data to.   
 %     i = strcmpi(get(obj,'fontweight'),'bold');                              %Find the pushbutton with the bold fontweight.
+fid = 1;
     Plot_Timeline(obj(2),[],obj,fid,data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue,Grayscale_string);                                       %Call the subfunction to write the data by the appropriate timeline.
-    fclose(fid);                                                            %Close the figure.
-    winopen([path file]);                                                   %Open the CSV file.
+%     fclose(fid);                                                            %Close the figure.
+%     winopen([path file]);                                                   %Open the CSV file.
 end
 
 %% This function is called whenever the main figure is resized.
