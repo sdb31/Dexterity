@@ -17,7 +17,7 @@ if ~exist(datapath,'dir')                                           %If the prim
     mkdir(datapath);                                                %Make the primary local data path.
 end
 
-cd(datapath);
+% cd(datapath);
 Info = dir(datapath);
 AnalysisNames = {Info.name}; AnalysisNames = AnalysisNames(3:end);
 if isempty(AnalysisNames) ==1;
@@ -676,7 +676,7 @@ for d = 1:length(devices)                                                   %Ste
             'units','centimeters','position',pos,'fontsize',fontsize);      %Create pushbuttons for selecting the timescale.
     end
     pos = [sp2, sp1, 2*(w-6*sp2)/6, ui_h];
-    obj(6) = uicontrol(fig,'style','radiobutton','string','Training Days',...
+    obj(6) = uicontrol(fig,'style','radiobutton','string','Concatenate Dates',...
         'units','centimeters','position',pos,'fontsize',fontsize);
     pos = [30*sp2, sp1, 2*(w-6*sp2)/6, ui_h];
     obj(7) = uicontrol(fig,'style','radiobutton','string','Group Animals',...

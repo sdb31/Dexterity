@@ -4,7 +4,7 @@ if ~exist(datapath,'dir')                                           %If the prim
     mkdir(datapath);                                                %Make the primary local data path.
 end
 
-cd(datapath);
+% cd(datapath);
 Info = dir(datapath);
 
 choice = questdlg('Would you like to create a new experiment or choose from an existing one?',...
@@ -376,7 +376,8 @@ switch choice
         FilePath = [FilePath '\ConfigFiles'];
         cd(FilePath);
         config.weeks = Weeks;
-        config.events = ExperimentInfo{3}; config.events = {config.events};
+        %         config.events = ExperimentInfo{3}; config.events = {config.events};
+        config.events = Events;
         config.devices = devices;
         config.plotdata = plotdata;
         xlabels = inputdlg('What are your xlabels?','XLabels', [1 50]);
@@ -388,7 +389,7 @@ switch choice
                 'listsize',[250 100],...
                 'initialvalue',1,...
                 'ListString',config.xlabels);
-            config.event_location(i) = event_location(i);
+            config.event_location(i) = event_location;
         end
         for m = 1:length(rat_list);
             config.animal(m).name = AnimalName{m};
@@ -402,7 +403,7 @@ if isempty(choice) == 1;
     return
 else
 path = 'C:\AnalyzeGroup';    
-cd(path);
+% cd(path);
 Info = dir(path);
 ExperimentNames = {Info.name};
 ExperimentNames = ExperimentNames(3:end);
@@ -469,9 +470,9 @@ end
 function PlotButton(hObject,~, Experiment,ExperimentNames)
 index_selected = get(Experiment,'value');
 SelectedExperiment = ExperimentNames(index_selected);
-temp = ['C:\AnalyzeGroup\' SelectedExperiment{:} '\ConfigFiles'];
-cd(temp);
-temp = [SelectedExperiment{:} 'Config.mat'];
+temp = ['C:\AnalyzeGroup\' SelectedExperiment{:} '\ConfigFiles\'];
+% cd(temp);
+temp = [temp SelectedExperiment{:} 'Config.mat'];
 load(temp);
 devices = config.devices;
 data = config.plotdata;
@@ -607,7 +608,7 @@ Plot_Timeline(obj(2),[],obj,[],data,Weeks,AnimalData,index_selected,xlabels,Even
 %% This subfunction sorts the data into single-session values and sends it to the plot function.
 function Plot_Timeline(hObject,~,obj,fid,data,Weeks,AnimalData,index_selected,xlabels,EventData,Plotvalue,Grayscale_string)
 path = 'C:\AnalyzeGroup';
-cd(path);
+% cd(path);
 Info = dir(path);
 for q = 1:length(AnimalData);
     Sessions(q,:) = str2num(AnimalData(q).sessions);
@@ -1531,9 +1532,9 @@ Plot_Timeline(obj(1),[],obj,[],data,Weeks,AnimalData,index_selected,xlabels,Even
 function ExperimentCallback(hObject,~,GUI_Subjects,GUI_GroupNames,ExperimentNames,Subjects,Groups,Events,Labels)
 index_selected = get(hObject,'value');
 SelectedExperiment = ExperimentNames{index_selected};
-temp = ['C:\AnalyzeGroup\' SelectedExperiment '\ConfigFiles'];
-cd(temp);
-temp = [SelectedExperiment 'Config.mat'];
+temp = ['C:\AnalyzeGroup\' SelectedExperiment '\ConfigFiles\'];
+% cd(temp);
+temp = [temp SelectedExperiment 'Config.mat'];
 load(temp);
 EventNames = config.events; %EventNames = strsplit(EventNames);
 SubjectNames = GUI_Subjects(index_selected,:);
